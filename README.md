@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Who Are You Really?
+
+เว็บเกมแข่งขัน 2 คน — รับบทบาทลับ ตอบสถานการณ์ตามบท แล้วทายว่าเพื่อนเป็นใคร
+
+## Tech Stack
+
+| Layer     | Technology                      |
+| --------- | ------------------------------- |
+| Framework | Next.js 16 (App Router)         |
+| Language  | TypeScript (strict)             |
+| Realtime  | Firebase Realtime Database      |
+| Auth      | Firebase Anonymous Auth         |
+| Hosting   | Vercel                          |
+| Testing   | Vitest + Playwright (planned)   |
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Lint
+npm run lint
+
+# Type check
+npx tsc --noEmit
+
+# Build for production
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.example` to `.env.local` and fill in your Firebase credentials.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Project Structure
 
-## Learn More
+```
+app/                  Next.js pages + API route handlers
+components/           UI components (cards, lobby, avatars, etc.)
+lib/game/             Game engine types, state machine, scoring
+lib/server/           Auth, room service, transactions
+lib/firebase/         Firebase client + admin SDK setup
+content/              Roles, scenarios, editorial (server-only)
+tests/                Unit, rules, integration, E2E tests
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture Decisions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Next.js 16.4.0** with App Router and TypeScript strict mode
+- **React 19.3.0** with server/client component split
+- **CSS variables** design system — detective-file theme (cream, navy, brick, sea-teal)
+- **No Tailwind** — custom CSS matching the HTML template design
+- **No third-party font loading** — local Thai font fallback chain for reliability
