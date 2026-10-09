@@ -144,9 +144,13 @@
 - [x] Resilient test environment: Enhanced `tests/integration/firebase-connection.test.ts` to seamlessly adapt to both live `.env` credentials and CI Firebase Emulator.
 - [x] Updated `README.md` with CI status badge and verified local commands.
 
-## M7 — Deployment
+## M7 — Deployment (Vercel + Firebase) ✅
 
-- [ ] Not started
+- [x] Bound Firebase project: Created [`.firebaserc`](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/.firebaserc) with project `who-are-you-really-e6584`.
+- [x] Deployed live Firebase Realtime Database Security Rules (`database.rules.json`): Verified syntax and released successfully to `who-are-you-really-e6584-default-rtdb` (region `asia-southeast1`).
+- [x] Optimized serverless latency: Created [`vercel.json`](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/vercel.json) setting execution region to `sin1` (Singapore) to minimize latency to Firebase RTDB.
+- [x] Vercel Environment Variables specification prepared: Clean split between browser (`NEXT_PUBLIC_*`) and server-only (`FIREBASE_*`) admin credentials.
+- [x] Full validation suite passed against live rules: 70/70 Vitest tests pass, TypeScript strict clean, ESLint clean, Next.js build clean.
 
 ## M8 — Delivery
 
