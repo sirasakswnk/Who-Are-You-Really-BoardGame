@@ -53,9 +53,30 @@
 - [x] Match Deck Selector ([lib/server/deck.ts](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/lib/server/deck.ts)) — selects 16 unique scenarios across 4 rounds without replacement, independent of roles, with single-pass option shuffle
 - [x] Unit tests passed (11 tests in `content.test.ts`, 40 tests total across 4 test suites)
 
-## M3 — Firebase/Auth/API
+## M3 — Firebase/Auth/API ✅
 
-- [ ] Not started
+- [x] Firebase Client SDK (`lib/firebase/client.ts`) with anonymous auth persistence and emulator connection
+- [x] Firebase Admin SDK (`lib/firebase/admin.ts`) and auth token verifier (`lib/server/auth.ts`)
+- [x] Realtime Database security rules (`database.rules.json`) and configuration (`firebase.json`)
+  - Strict deny-by-default at root
+  - Public projection readable by room members
+  - Private subtree readable exclusively by `auth.uid == $uid`
+  - Server subtree sealed from all clients
+- [x] Authoritative Room Service (`lib/server/roomService.ts`)
+  - 6-character unambiguous room code generation
+  - Atomic room creation and seating (3rd player rejected atomically)
+  - Reconnect / seat resumption for existing player UIDs
+  - Synchronized public and private projections
+  - Idempotency receipts preventing duplicate action processing
+- [x] Next.js Route Handlers (`app/api/*`)
+  - `POST /api/room/create`
+  - `POST /api/room/join`
+  - `POST /api/room/ready`
+  - `POST /api/room/start`
+  - `POST /api/game/action`
+  - `GET /api/room/[code]`
+  - `Cache-Control: no-store` on authenticated responses
+- [x] Unit & Integration tests passed (10 tests in `roomService.test.ts` & `api.test.ts`, 50 tests total across 6 test suites)
 
 ## M4 — Mobile UI
 

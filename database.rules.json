@@ -1,0 +1,40 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$code": {
+        ".read": false,
+        ".write": false,
+        "members": {
+          ".read": "auth != null && data.child(auth.uid).exists()",
+          ".write": false
+        },
+        "public": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": false
+        },
+        "private": {
+          "$uid": {
+            ".read": "auth != null && auth.uid === $uid",
+            ".write": false
+          }
+        },
+        "server": {
+          ".read": false,
+          ".write": false
+        }
+      }
+    },
+    "presence": {
+      "$code": {
+        "$uid": {
+          "$connId": {
+            ".read": "auth != null",
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    }
+  }
+}
