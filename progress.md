@@ -132,9 +132,17 @@
   - ESLint: Clean (0 errors, 0 warnings).
   - Next.js Production Build: Successfully generated.
 
-## M6 — GitHub + CI
+## M6 — GitHub + CI ✅
 
-- [ ] Not started
+- [x] Verified remote Git repository: `https://github.com/sirasakswnk/Who-Are-You-Really-BoardGame.git` on branch `master`.
+- [x] Created GitHub Actions CI workflow ([`.github/workflows/ci.yml`](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/.github/workflows/ci.yml)):
+  - Least-privilege permissions: `permissions: contents: read`.
+  - Pinned actions: `checkout@v4`, `setup-node@v4`, `setup-java@v4`, `upload-artifact@v4`.
+  - Hermetic test environment: Uses Firebase Local Emulator Suite (Auth 9099 + RTDB 9000 with real `database.rules.json`) and mock credentials — no production secrets required or leaked on CI.
+  - Automated pipeline: `npm ci` → `npm run lint` → `npm run typecheck` → `npm run validate:content` → `npm test` (with emulators) → `npm run build` → `npx playwright test` (with emulators).
+- [x] Enhanced `package.json` scripts: Added `typecheck` and `validate:content`.
+- [x] Resilient test environment: Enhanced `tests/integration/firebase-connection.test.ts` to seamlessly adapt to both live `.env` credentials and CI Firebase Emulator.
+- [x] Updated `README.md` with CI status badge and verified local commands.
 
 ## M7 — Deployment
 

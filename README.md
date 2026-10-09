@@ -1,32 +1,44 @@
 # Who Are You Really?
 
+[![CI](https://github.com/sirasakswnk/Who-Are-You-Really-BoardGame/actions/workflows/ci.yml/badge.svg)](https://github.com/sirasakswnk/Who-Are-You-Really-BoardGame/actions/workflows/ci.yml)
+
 เว็บเกมแข่งขัน 2 คน — รับบทบาทลับ ตอบสถานการณ์ตามบท แล้วทายว่าเพื่อนเป็นใคร
 
 ## Tech Stack
 
 | Layer     | Technology                      |
 | --------- | ------------------------------- |
-| Framework | Next.js 16 (App Router)         |
-| Language  | TypeScript (strict)             |
+| Framework | Next.js 16.4.0 (App Router)     |
+| UI / Core | React 19.3.0                    |
+| Language  | TypeScript (strict mode)        |
 | Realtime  | Firebase Realtime Database      |
 | Auth      | Firebase Anonymous Auth         |
-| Hosting   | Vercel                          |
-| Testing   | Vitest + Playwright (planned)   |
+| Testing   | Vitest 3.2.7 + Playwright 1.64  |
+| CI / CD   | GitHub Actions                  |
 
 ## Getting Started
 
 ```bash
-# Install dependencies
-npm install
+# Clean install dependencies
+npm ci
 
 # Start development server
 npm run dev
 
-# Lint
+# Code linting (ESLint 9)
 npm run lint
 
-# Type check
-npx tsc --noEmit
+# Strict TypeScript type check
+npm run typecheck
+
+# Validate game scenarios content & coverage
+npm run validate:content
+
+# Run Unit & Concurrency tests (Vitest)
+npm test
+
+# Run multi-browser E2E tests (Playwright)
+npm run test:e2e
 
 # Build for production
 npm run build

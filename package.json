@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "validate:content": "vitest run tests/unit/content.test.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"

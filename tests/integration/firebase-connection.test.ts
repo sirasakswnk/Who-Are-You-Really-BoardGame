@@ -7,7 +7,17 @@ beforeAll(() => {
 });
 
 describe('Firebase Real Connection & Credentials Verification', () => {
+  const isEmulator = Boolean(
+    process.env.FIREBASE_DATABASE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST
+  );
+
   it('has all required environment variables set', () => {
+    if (isEmulator) {
+      expect(process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID).toBeTruthy();
+      expect(process.env.FIREBASE_DATABASE_EMULATOR_HOST).toBeTruthy();
+      return;
+    }
+
     const requiredEnv = [
       'NEXT_PUBLIC_FIREBASE_API_KEY',
       'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
@@ -29,18 +39,26 @@ describe('Firebase Real Connection & Credentials Verification', () => {
 
   it('connects to Firebase Client SDK and performs Anonymous Sign-in', async () => {
     const { initializeApp, getApps, getApp } = await import('firebase/app');
-    const { getAuth, signInAnonymously } = await import('firebase/auth');
+    const { getAuth, signInAnonymously, connectAuthEmulator } = await import('firebase/auth');
 
     const firebaseConfig = {
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'mock-api-key',
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'mock-project.firebaseapp.com',
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || process.env.FIREBASE_PROJECT_ID || 'mock-project',
+      databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || 'http://127.0.0.1:9000?ns=mock-project-default-rtdb',
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:123456789:web:abcdef',
     };
 
     const clientApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const clientAuth = getAuth(clientApp);
+
+    if (process.env.FIREBASE_AUTH_EMULATOR_HOST) {
+      try {
+        connectAuthEmulator(clientAuth, `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}`, { disableWarnings: true });
+      } catch {
+        // already connected
+      }
+    }
 
     const userCredential = await signInAnonymously(clientAuth);
     expect(userCredential.user).toBeDefined();
@@ -55,15 +73,23 @@ describe('Firebase Real Connection & Credentials Verification', () => {
     const { getAuth: getAdminAuth } = await import('firebase-admin/auth');
 
     let adminApp;
+    const hasAdminCert = Boolean(process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
     if (getAdminApps().length === 0) {
-      adminApp = initAdminApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-        databaseURL: process.env.FIREBASE_DATABASE_URL,
-      });
+      if (hasAdminCert) {
+        adminApp = initAdminApp({
+          credential: cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          }),
+          databaseURL: process.env.FIREBASE_DATABASE_URL,
+        });
+      } else {
+        adminApp = initAdminApp({
+          projectId: process.env.FIREBASE_PROJECT_ID || 'mock-project',
+          databaseURL: process.env.FIREBASE_DATABASE_URL || 'http://127.0.0.1:9000?ns=mock-project-default-rtdb',
+        });
+      }
     } else {
       adminApp = getAdminApps()[0];
     }
@@ -78,15 +104,23 @@ describe('Firebase Real Connection & Credentials Verification', () => {
     const { getDatabase } = await import('firebase-admin/database');
 
     let adminApp;
+    const hasAdminCert = Boolean(process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY);
     if (getAdminApps().length === 0) {
-      adminApp = initAdminApp({
-        credential: cert({
-          projectId: process.env.FIREBASE_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }),
-        databaseURL: process.env.FIREBASE_DATABASE_URL,
-      });
+      if (hasAdminCert) {
+        adminApp = initAdminApp({
+          credential: cert({
+            projectId: process.env.FIREBASE_PROJECT_ID,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+          }),
+          databaseURL: process.env.FIREBASE_DATABASE_URL,
+        });
+      } else {
+        adminApp = initAdminApp({
+          projectId: process.env.FIREBASE_PROJECT_ID || 'mock-project',
+          databaseURL: process.env.FIREBASE_DATABASE_URL || 'http://127.0.0.1:9000?ns=mock-project-default-rtdb',
+        });
+      }
     } else {
       adminApp = getAdminApps()[0];
     }
