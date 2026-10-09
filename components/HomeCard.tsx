@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { ensureAnonymousAuth } from '@/lib/firebase/client';
 
 /* ─── constants ─── */
 const AVATARS: [string, string][] = [
@@ -48,6 +50,7 @@ export default function HomeCard() {
   const [nameInvalid, setNameInvalid] = useState(false);
   const [codeInvalid, setCodeInvalid] = useState(false);
   const [busy, setBusy] = useState(false);
+  const router = useRouter();
 
   const inviteCode = useMemo(() => parseInviteCode(), []);
   const invited = inviteCode.length === CODE_LEN;
@@ -164,24 +167,40 @@ export default function HomeCard() {
   }
 
   /* ─── actions ─── */
-  function doAction(eventName: string, detail: Record<string, string | undefined>) {
-    setBusy(true);
-    setStatusMsg('');
-    document.dispatchEvent(new CustomEvent(eventName, { detail }));
-    // Stub: show message after 900ms (will be replaced by real API calls)
-    setTimeout(() => {
-      setBusy(false);
-      setStatusMsg('นี่คือต้นแบบหน้า UI ยังไม่ได้เชื่อมต่อระบบห้อง');
-    }, 900);
-  }
-
-  function createRoom() {
+  async function createRoom() {
     if (busy || guardOffline()) return;
     if (validateProfile()) return;
-    doAction('wayr:create-room', { name: trimmedName, avatarId: avatar || undefined });
+    setBusy(true);
+    setStatusMsg('กำลังสร้างห้องและเตรียมแฟ้มสืบสวน...');
+
+    try {
+      const user = await ensureAnonymousAuth();
+      const token = await user.getIdToken();
+
+      const res = await fetch('/api/room/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ displayName: trimmedName, avatarId: avatar || 'cat' }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'สร้างห้องไม่สำเร็จ');
+      }
+
+      const data = await res.json();
+      router.push(`/room/${data.code}`);
+    } catch (err: unknown) {
+      setBusy(false);
+      const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการสร้างห้อง';
+      setStatusMsg(msg);
+    }
   }
 
-  function joinRoom() {
+  async function joinRoom() {
     if (busy || guardOffline()) return;
     const bad = validateProfile();
     if (code.length !== CODE_LEN) {
@@ -189,7 +208,36 @@ export default function HomeCard() {
       setCodeInvalid(true);
     }
     if (bad || code.length !== CODE_LEN) return;
-    doAction('wayr:join-room', { name: trimmedName, avatarId: avatar || undefined, code });
+
+    setBusy(true);
+    setStatusMsg('กำลังตรวจสอบรหัสห้อง...');
+
+    try {
+      const user = await ensureAnonymousAuth();
+      const token = await user.getIdToken();
+
+      const res = await fetch('/api/room/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ code, displayName: trimmedName, avatarId: avatar || 'fox' }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'ไม่สามารถเข้าร่วมห้องได้');
+      }
+
+      router.push(`/room/${code}`);
+    } catch (err: unknown) {
+      setBusy(false);
+      const msg = err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการเข้าห้อง';
+      setCodeMsg(msg);
+      setCodeInvalid(true);
+      setStatusMsg(msg);
+    }
   }
 
   function onSubmit(e: React.FormEvent) {
