@@ -7,16 +7,16 @@ export async function POST(req: Request) {
   try {
     const auth = await verifyAuthToken(req);
     if (!auth) {
-      const hint = !process.env.FIREBASE_CLIENT_EMAIL
-        ? ' (กรุณาตรวจสอบว่าได้ตั้งค่า FIREBASE_CLIENT_EMAIL และ FIREBASE_PRIVATE_KEY บน Vercel หรือยัง)'
-        : '';
       return NextResponse.json(
-        { error: `Unauthorized: ไม่สามารถยืนยันตัวตนได้${hint}` },
+        {
+          error:
+            'Unauthorized: ไม่สามารถยืนยันตัวตนได้ (โปรดตรวจสอบ /api/diagnostics ว่า FIREBASE_CLIENT_EMAIL และ FIREBASE_PRIVATE_KEY บน Vercel พร้อมใช้งานหรือไม่)',
+        },
         { status: 401 }
       );
     }
 
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : 'Player 1';
     const avatarId = typeof body.avatarId === 'string' ? body.avatarId : 'cat';
 

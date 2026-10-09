@@ -197,9 +197,12 @@ export default function HomeCard() {
       }
 
       if (!res.ok) {
+        console.error('[CreateRoom] Server responded with error:', res.status, text);
         const errorMsg =
           data?.error ||
-          (text && text.length < 150 ? text : `สร้างห้องไม่สำเร็จ (HTTP ${res.status})`);
+          (text && text.length < 150 && !text.includes('<!DOCTYPE')
+            ? text
+            : `สร้างห้องไม่สำเร็จ (HTTP ${res.status}) - โปรดตรวจสอบ /api/diagnostics`);
         throw new Error(errorMsg);
       }
 
@@ -251,9 +254,12 @@ export default function HomeCard() {
       }
 
       if (!res.ok) {
+        console.error('[JoinRoom] Server responded with error:', res.status, text);
         const errorMsg =
           data?.error ||
-          (text && text.length < 150 ? text : `ไม่สามารถเข้าร่วมห้องได้ (HTTP ${res.status})`);
+          (text && text.length < 150 && !text.includes('<!DOCTYPE')
+            ? text
+            : `ไม่สามารถเข้าร่วมห้องได้ (HTTP ${res.status}) - โปรดตรวจสอบ /api/diagnostics`);
         throw new Error(errorMsg);
       }
 

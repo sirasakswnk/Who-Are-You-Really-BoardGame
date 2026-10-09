@@ -3,7 +3,7 @@
  * Verifies Firebase ID Token from incoming HTTP Authorization header
  */
 
-import { adminAuth } from '../firebase/admin';
+import { adminAuth, isAdminInitializedWithCredentials, adminInitError } from '../firebase/admin';
 
 export interface AuthContext {
   uid: string;
@@ -29,14 +29,14 @@ export async function verifyAuthToken(req: Request): Promise<AuthContext | null>
     return { uid: token.replace('mock-token-', '') };
   }
 
-  // Prevent metadata service lookup hang in Serverless (AWS/Vercel) if credentials missing
+  // Prevent metadata service lookup hang in Serverless (AWS/Vercel) if credentials missing or invalid
   if (
-    !process.env.FIREBASE_CLIENT_EMAIL &&
+    !isAdminInitializedWithCredentials &&
     !process.env.FIREBASE_AUTH_EMULATOR_HOST &&
     process.env.NODE_ENV !== 'test'
   ) {
     console.error(
-      'Missing FIREBASE_CLIENT_EMAIL in server environment variables. Token verification cannot proceed.'
+      `Firebase Admin credentials not initialized. Reason: ${adminInitError || 'Missing credentials'}`
     );
     return null;
   }

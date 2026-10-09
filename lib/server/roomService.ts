@@ -18,7 +18,7 @@ import {
 } from '../game/engine';
 import { selectMatchDeck } from './deck';
 import { generateRolePair } from '../game/roles';
-import { adminDb } from '../firebase/admin';
+import { adminDb, isAdminInitializedWithCredentials } from '../firebase/admin';
 
 /** Unambiguous characters for 6-letter room code (omits 0, O, 1, I, L) */
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -133,14 +133,21 @@ function isLiveDbConfigured(): boolean {
   }
   return Boolean(
     process.env.FIREBASE_DATABASE_EMULATOR_HOST ||
-      (process.env.FIREBASE_CLIENT_EMAIL && process.env.FIREBASE_PRIVATE_KEY)
+      (isAdminInitializedWithCredentials &&
+        process.env.FIREBASE_CLIENT_EMAIL &&
+        process.env.FIREBASE_PRIVATE_KEY)
   );
 }
 
 async function syncRoomToDatabase(code: string, room: RoomRecord): Promise<void> {
   if (!isLiveDbConfigured()) return;
   try {
-    await adminDb.ref(`rooms/${code}`).set(room);
+    await Promise.race([
+      adminDb.ref(`rooms/${code}`).set(room),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('RTDB sync timeout')), 2500)
+      ),
+    ]);
   } catch (err) {
     console.warn(`Failed to sync room ${code} to RTDB:`, err);
   }
@@ -149,8 +156,13 @@ async function syncRoomToDatabase(code: string, room: RoomRecord): Promise<void>
 async function fetchRoomFromDatabase(code: string): Promise<RoomRecord | null> {
   if (!isLiveDbConfigured()) return null;
   try {
-    const snap = await adminDb.ref(`rooms/${code}`).get();
-    if (snap.exists()) {
+    const snap = await Promise.race([
+      adminDb.ref(`rooms/${code}`).get(),
+      new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 2500)
+      ),
+    ]);
+    if (snap && snap.exists()) {
       return snap.val() as RoomRecord;
     }
   } catch (err) {
