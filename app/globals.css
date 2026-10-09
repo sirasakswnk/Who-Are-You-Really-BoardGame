@@ -5,7 +5,7 @@
 
 :root {
   --desk: #DCCFA8;
-  --folder: #F2E7C9;
+  --folder: #FFF4D8;
   --paper: #FFFCF2;
   --ink: #1B2A4A;
   --ink-soft: #4A5873;
@@ -58,7 +58,7 @@ button, input { font: inherit; color: inherit; }
 .offline[hidden] { display: none; }
 
 /* ---------- folder (with two sheets peeking out behind it) ---------- */
-.wrap { position: relative; isolation: isolate; max-width: 584px; margin: 48px auto 0; padding: 0 12px; overflow-x: clip; }
+.wrap { position: relative; isolation: isolate; max-width: 584px; margin: 48px auto 0; padding: 0 12px; overflow-x: visible; }
 .folder {
   position: relative;
   background: var(--folder);
@@ -71,8 +71,9 @@ button, input { font: inherit; color: inherit; }
   content: ""; position: absolute; inset: 0; z-index: -1;
   border: 2px solid var(--ink); border-radius: inherit;
 }
-.folder::before { background: var(--blush); transform: rotate(1.6deg) translate(4px, 3px); }
-.folder::after  { background: var(--paper); transform: rotate(-1.1deg) translate(-3px, 4px); }
+/* Tall mobile folders need a smaller tilt so both backing sheets fit on screen. */
+.folder::before { background: var(--blush); transform: rotate(.6deg) translate(4px, 3px); }
+.folder::after  { background: var(--paper); transform: rotate(-.4deg) translate(-3px, 4px); }
 
 .tab {
   position: absolute; left: 26px; top: -38px;
@@ -447,8 +448,10 @@ body {
 .edge-sticker { display: none; }
 
 @media (min-width: 900px) {
-  .wrap { max-width: 1096px; padding: 0 28px; }
+  .wrap { max-width: 1096px; padding: 0 28px; overflow-x: clip; }
   .folder { --peek: 26px; --stk: 50px; }
+  .folder::before { transform: rotate(1.6deg) translate(4px, 3px); }
+  .folder::after  { transform: rotate(-1.1deg) translate(-3px, 4px); }
   .edge-clip { right: 96px; top: -34px; width: 28px; }
   .edge-sticker { display: grid; bottom: 150px; }
   .st { height: 64px; }
