@@ -9,6 +9,20 @@ import { getDatabase, Database } from 'firebase-admin/database';
 
 let app: App;
 
+export function normalizePrivateKey(rawKey: string | undefined): string | undefined {
+  if (!rawKey) return undefined;
+  let key = rawKey.trim();
+  // Strip surrounding double or single quotes if copied with quotes
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
+  // Replace literal '\n' string with real newlines
+  key = key.replace(/\\n/g, '\n');
+  // Normalize Windows \r\n to \n
+  key = key.replace(/\r\n/g, '\n');
+  return key;
+}
+
 if (getApps().length === 0) {
   const projectId =
     process.env.FIREBASE_PROJECT_ID ||
@@ -19,20 +33,26 @@ if (getApps().length === 0) {
     process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ||
     'https://mock-project-default-rtdb.firebaseio.com';
 
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    : undefined;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL?.trim();
+  const privateKey = normalizePrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
   if (clientEmail && privateKey) {
-    app = initializeApp({
-      credential: cert({
+    try {
+      app = initializeApp({
+        credential: cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        }),
+        databaseURL,
+      });
+    } catch (certErr) {
+      console.error('Failed to initialize Firebase Admin with cert:', certErr);
+      app = initializeApp({
         projectId,
-        clientEmail,
-        privateKey,
-      }),
-      databaseURL,
-    });
+        databaseURL,
+      });
+    }
   } else {
     app = initializeApp({
       projectId,

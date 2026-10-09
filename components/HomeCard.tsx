@@ -186,12 +186,27 @@ export default function HomeCard() {
         body: JSON.stringify({ displayName: trimmedName, avatarId: avatar || 'cat' }),
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'สร้างห้องไม่สำเร็จ');
+      const text = await res.text();
+      let data: { code?: string; error?: string } | null = null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          // Response is not JSON
+        }
       }
 
-      const data = await res.json();
+      if (!res.ok) {
+        const errorMsg =
+          data?.error ||
+          (text && text.length < 150 ? text : `สร้างห้องไม่สำเร็จ (HTTP ${res.status})`);
+        throw new Error(errorMsg);
+      }
+
+      if (!data?.code) {
+        throw new Error('ไม่พบรหัสห้องที่สร้าง');
+      }
+
       router.push(`/room/${data.code}`);
     } catch (err: unknown) {
       setBusy(false);
@@ -225,9 +240,21 @@ export default function HomeCard() {
         body: JSON.stringify({ code, displayName: trimmedName, avatarId: avatar || 'fox' }),
       });
 
+      const text = await res.text();
+      let data: { code?: string; error?: string } | null = null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch {
+          // Response is not JSON
+        }
+      }
+
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'ไม่สามารถเข้าร่วมห้องได้');
+        const errorMsg =
+          data?.error ||
+          (text && text.length < 150 ? text : `ไม่สามารถเข้าร่วมห้องได้ (HTTP ${res.status})`);
+        throw new Error(errorMsg);
       }
 
       router.push(`/room/${code}`);

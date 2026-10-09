@@ -6,6 +6,7 @@ import { POST as startRoute } from '../../app/api/room/start/route';
 import { POST as actionRoute } from '../../app/api/game/action/route';
 import { GET as getRoomRoute } from '../../app/api/room/[code]/route';
 import { memoryRooms } from '../../lib/server/roomService';
+import { normalizePrivateKey } from '../../lib/firebase/admin';
 
 describe('API Route Handlers (app/api/*)', () => {
   beforeEach(() => {
@@ -115,6 +116,32 @@ describe('API Route Handlers (app/api/*)', () => {
       );
       const actRes = await actionRoute(actReq);
       expect(actRes.status).toBe(200);
+    });
+  });
+
+  describe('normalizePrivateKey', () => {
+    it('returns undefined if input is undefined or empty', () => {
+      expect(normalizePrivateKey(undefined)).toBeUndefined();
+      expect(normalizePrivateKey('')).toBeUndefined();
+    });
+
+    it('replaces literal \\n with real newlines', () => {
+      const input = '-----BEGIN PRIVATE KEY-----\\nMIIEvgIBADANBg\\n-----END PRIVATE KEY-----';
+      const output = normalizePrivateKey(input);
+      expect(output).toBe('-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBg\n-----END PRIVATE KEY-----');
+    });
+
+    it('strips enclosing double or single quotes if copied from env files', () => {
+      const inputWithDouble = '"-----BEGIN PRIVATE KEY-----\\nABC\\n-----END PRIVATE KEY-----\\n"';
+      expect(normalizePrivateKey(inputWithDouble)).toBe('-----BEGIN PRIVATE KEY-----\nABC\n-----END PRIVATE KEY-----\n');
+
+      const inputWithSingle = "'-----BEGIN PRIVATE KEY-----\\nXYZ\\n-----END PRIVATE KEY-----\\n'";
+      expect(normalizePrivateKey(inputWithSingle)).toBe('-----BEGIN PRIVATE KEY-----\nXYZ\n-----END PRIVATE KEY-----\n');
+    });
+
+    it('normalizes Windows CRLF to LF', () => {
+      const input = 'line1\r\nline2\r\nline3';
+      expect(normalizePrivateKey(input)).toBe('line1\nline2\nline3');
     });
   });
 });

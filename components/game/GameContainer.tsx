@@ -138,16 +138,30 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
           headers: { Authorization: `Bearer ${token}` },
         });
 
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || 'Failed to connect to room');
+        const text = await res.text();
+        let data: {
+          error?: string;
+          seat?: number;
+          isHost?: boolean;
+          public?: unknown;
+          private?: unknown;
+        } | null = null;
+        if (text) {
+          try {
+            data = JSON.parse(text);
+          } catch {
+            // not json
+          }
         }
 
-        const data = await res.json();
-        if (!isMounted) return;
+        if (!res.ok) {
+          throw new Error(data?.error || `Failed to connect to room (HTTP ${res.status})`);
+        }
 
-        setMySeat(data.seat);
-        setIsHost(data.isHost);
+        if (!isMounted || !data) return;
+
+        if (typeof data.seat === 'number') setMySeat(data.seat as 0 | 1);
+        if (typeof data.isHost === 'boolean') setIsHost(data.isHost);
         if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
         if (data.private) setPrivateState(normalizePrivateState(data.private));
 
@@ -215,11 +229,18 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
           headers: { Authorization: `Bearer ${tokenRef.current}` },
         });
         if (res.ok) {
-          const data = await res.json();
-          if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
-          if (data.private) setPrivateState(normalizePrivateState(data.private));
-          if (typeof data.seat === 'number') setMySeat(data.seat);
-          if (typeof data.isHost === 'boolean') setIsHost(data.isHost);
+          const rawText = await res.text();
+          if (rawText) {
+            try {
+              const data = JSON.parse(rawText);
+              if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
+              if (data.private) setPrivateState(normalizePrivateState(data.private));
+              if (typeof data.seat === 'number') setMySeat(data.seat);
+              if (typeof data.isHost === 'boolean') setIsHost(data.isHost);
+            } catch {
+              // Ignore parse error
+            }
+          }
         }
       } catch {
         // Ignore background polling glitches
@@ -249,8 +270,17 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Request failed');
+        const rawText = await res.text();
+        let errorMsg = `Server error (${res.status})`;
+        if (rawText) {
+          try {
+            const data = JSON.parse(rawText);
+            if (data?.error) errorMsg = data.error;
+          } catch {
+            if (rawText.length < 150) errorMsg = rawText;
+          }
+        }
+        throw new Error(errorMsg);
       }
 
       // Immediately poll for updated state
@@ -259,9 +289,16 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (syncRes.ok) {
-          const syncData = await syncRes.json();
-          if (syncData.public) setPublicState(normalizePublicState(syncData.public, roomCode));
-          if (syncData.private) setPrivateState(normalizePrivateState(syncData.private));
+          const syncText = await syncRes.text();
+          if (syncText) {
+            try {
+              const syncData = JSON.parse(syncText);
+              if (syncData.public) setPublicState(normalizePublicState(syncData.public, roomCode));
+              if (syncData.private) setPrivateState(normalizePrivateState(syncData.private));
+            } catch {
+              // Ignore
+            }
+          }
         }
       } catch {
         // Ignore

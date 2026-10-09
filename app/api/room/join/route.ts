@@ -4,12 +4,18 @@ import { joinRoom } from '@/lib/server/roomService';
 
 
 export async function POST(req: Request) {
-  const auth = await verifyAuthToken(req);
-  if (!auth) {
-    return NextResponse.json({ error: 'Unauthorized: missing or invalid token' }, { status: 401 });
-  }
-
   try {
+    const auth = await verifyAuthToken(req);
+    if (!auth) {
+      const hint = !process.env.FIREBASE_CLIENT_EMAIL
+        ? ' (กรุณาตรวจสอบว่าได้ตั้งค่า FIREBASE_CLIENT_EMAIL และ FIREBASE_PRIVATE_KEY บน Vercel หรือยัง)'
+        : '';
+      return NextResponse.json(
+        { error: `Unauthorized: ไม่สามารถยืนยันตัวตนได้${hint}` },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const code = typeof body.code === 'string' ? body.code.toUpperCase().trim() : '';
     const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : 'Player 2';
@@ -32,6 +38,7 @@ export async function POST(req: Request) {
       }
     );
   } catch (err: unknown) {
+    console.error('POST /api/room/join error:', err);
     const message = err instanceof Error ? err.message : 'Internal Server Error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
