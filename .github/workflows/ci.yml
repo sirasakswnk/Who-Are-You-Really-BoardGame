@@ -35,10 +35,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
 
       - name: Setup Java 21 (for Firebase Local Emulator Suite)
@@ -65,18 +65,8 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run Unit & Integration Tests (Vitest with Firebase Emulators)
-        run: |
-          firebase emulators:exec --project mock-project --only auth,database "npm test"
-
-      - name: Build Next.js application
-        env:
-          NODE_ENV: production
-        run: npm run build
-
-      - name: Run Playwright E2E Tests (with Firebase Emulators)
-        run: |
-          firebase emulators:exec --project mock-project --only auth,database "npx playwright test"
+      - name: Run isolated Auth/RTDB regression, production build and browser acceptance
+        run: npm run verify:acceptance
 
       - name: Upload Playwright test results on failure
         if: failure()

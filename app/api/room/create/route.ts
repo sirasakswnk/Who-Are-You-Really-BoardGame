@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { roomJson } from '@/lib/server/roomJson';
 import { verifyAuthToken } from '@/lib/server/auth';
 import { createRoom } from '@/lib/server/roomService';
+import { roomHttpError } from '@/lib/server/roomHttpError';
+import { fields, profile, readBody, createRequestId } from '@/lib/server/commandSchema';
 
 
 export async function POST(req: Request) {
   try {
     const auth = await verifyAuthToken(req);
     if (!auth) {
-      return NextResponse.json(
+      return roomJson(
         {
           error:
             'Unauthorized: ไม่สามารถยืนยันตัวตนได้ (โปรดตรวจสอบ /api/diagnostics ว่า FIREBASE_CLIENT_EMAIL และ FIREBASE_PRIVATE_KEY บน Vercel พร้อมใช้งานหรือไม่)',
@@ -16,19 +18,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : 'Player 1';
-    const avatarId = typeof body.avatarId === 'string' ? body.avatarId : 'cat';
+    const body = fields(await readBody(req), ['displayName', 'avatarId', 'requestId']);
+    const { displayName, avatarId } = profile(body.displayName, body.avatarId);
+    const requestId = createRequestId(body.requestId);
+    const result = await createRoom(auth.uid, displayName, avatarId, requestId);
 
-    const result = await createRoom(auth.uid, displayName, avatarId);
-
-    return NextResponse.json(result, {
+    return roomJson(result, {
       status: 200,
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (err: unknown) {
-    console.error('POST /api/room/create error:', err);
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return roomHttpError(err);
   }
 }

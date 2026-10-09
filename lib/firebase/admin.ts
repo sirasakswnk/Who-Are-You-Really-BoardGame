@@ -49,9 +49,9 @@ if (getApps().length === 0) {
         databaseURL,
       });
       isAdminInitializedWithCredentials = true;
-    } catch (certErr) {
-      console.error('Failed to initialize Firebase Admin with cert:', certErr);
-      adminInitError = certErr instanceof Error ? certErr.message : String(certErr);
+    } catch {
+      console.error('Failed to initialize Firebase Admin credentials');
+      adminInitError = 'Firebase Admin credentials could not be initialized';
       app = initializeApp({
         projectId,
         databaseURL,
@@ -80,3 +80,10 @@ if (getApps().length === 0) {
 
 export const adminAuth: Auth = getAuth(app);
 export const adminDb: Database = getDatabase(app);
+
+/** Credential belongs to the Admin app, not the underlying compat DB app. */
+export async function getAdminDatabaseAccessToken(): Promise<string> {
+  const credential = app.options.credential;
+  if (!isAdminInitializedWithCredentials || !credential) throw new Error('Firebase Admin credentials unavailable');
+  return (await credential.getAccessToken()).access_token;
+}

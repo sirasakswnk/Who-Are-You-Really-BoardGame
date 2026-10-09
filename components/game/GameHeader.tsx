@@ -12,6 +12,7 @@ interface GameHeaderProps {
   scores: [number, number];
   onOpenRules: () => void;
   onLeaveRoom: () => void;
+  leaveBlocked?: boolean;
 }
 
 export default function GameHeader({
@@ -23,6 +24,7 @@ export default function GameHeader({
   scores,
   onOpenRules,
   onLeaveRoom,
+  leaveBlocked = false,
 }: GameHeaderProps) {
   const [showConfirmLeave, setShowConfirmLeave] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -75,6 +77,7 @@ export default function GameHeader({
           </button>
           <button
             className="header-icon-btn header-btn-leave"
+            disabled={leaveBlocked}
             onClick={() => setShowConfirmLeave(true)}
             title="ออกจากห้อง"
             aria-label="ออกจากห้อง"
@@ -117,7 +120,9 @@ export default function GameHeader({
           <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
             <h3 className="confirm-modal-title">ออกจากห้อง?</h3>
             <p className="confirm-modal-text">
-              หากออกจากห้อง การเล่นในรอบนี้จะหยุดชะงัก คุณแน่ใจหรือไม่ว่าต้องการออก?
+              {phase === 'LOBBY' ? 'ที่นั่งของคุณจะว่าง และโอนเจ้าห้องให้ผู้เล่นที่เหลือ'
+                : phase === 'ABANDONED' || phase === 'MATCH_RESULT' ? 'ออกจากห้องนี้และกลับหน้าหลัก'
+                : 'หากออกจากห้อง เกมนี้จะยุติและไม่มีผู้ชนะเต็มเกม'}
             </p>
             <div className="confirm-modal-actions">
               <button className="btn btn-secondary" onClick={() => setShowConfirmLeave(false)}>
@@ -125,9 +130,10 @@ export default function GameHeader({
               </button>
               <button
                 className="btn btn-danger"
+                disabled={leaveBlocked}
                 onClick={() => {
                   setShowConfirmLeave(false);
-                  onLeaveRoom();
+                  if (!leaveBlocked) onLeaveRoom();
                 }}
               >
                 ออกจากห้อง

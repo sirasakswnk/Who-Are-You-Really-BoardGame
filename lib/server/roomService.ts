@@ -1,455 +1,243 @@
-/**
- * Room Management & Authoritative State Synchronization
- * Manages room lifecycle, atomic seat assignment, idempotency receipts,
- * and synchronized projections between server, public, and private subtrees.
- */
-
-import {
-  GameState,
-  GameAction,
-  PlayerSeat,
-  Scenario,
-  RoleId,
-} from '../game/types';
-import {
-  createInitialGameState,
-  processAction,
-  getPlayerProjection,
-} from '../game/engine';
-import { selectMatchDeck } from './deck';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
+import type { GameAction, Scenario } from '../game/types';
+import { createInitialGameState, processAction } from '../game/engine';
 import { generateRolePair } from '../game/roles';
-import { adminDb, isAdminInitializedWithCredentials } from '../firebase/admin';
+import { selectMatchDeck } from './deck';
+import { ROOM_SCHEMA_VERSION, type RoomRecord } from './roomRecord';
+import { buildProjections } from './roomProjection';
+import { decodeRoomRecord, InvalidRoomDataError } from './roomSchema';
+import { getRoomStore, type RoomStore, type TransactionUpdate } from './roomStore';
+import type { ActionContext } from '../game/commands';
+import { parseEnvelope, profile, roomCode, createRequestId } from './commandSchema';
+import { RoomServiceError } from './roomErrors';
+import { enforceRateLimit } from './rateLimit';
+import { ROOM_TTL } from './roomMaintenance';
 
-/** Unambiguous characters for 6-letter room code (omits 0, O, 1, I, L) */
+export type { RoomRecord } from './roomRecord';
+export { buildProjections } from './roomProjection';
+export { memoryRooms } from './roomStore';
+export { RoomServiceError } from './roomErrors';
+
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-
-/**
- * Generates a crypto-secure 6-character room code.
- */
 export function generateRoomCode(): string {
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    const randomIndex = Math.floor(Math.random() * CODE_ALPHABET.length);
-    code += CODE_ALPHABET[randomIndex];
+  return Array.from({ length: 6 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
+}
+type ActionResult = { success: boolean; error?: string; status?: number };
+const fail = (error: string, status?: number): TransactionUpdate<ActionResult> => ({ result: { success: false, error, ...(status ? { status } : {}) } });
+const success: ActionResult = { success: true };
+const withoutRevision = (view: object) => {
+  const { revision: _revision, ...content } = view as Record<string, unknown>;
+  void _revision;
+  return JSON.stringify(content);
+};
+
+/** State, projections and receipts are committed at the same room CAS boundary. */
+function prepareCommit(previous: RoomRecord | null, next: RoomRecord): RoomRecord {
+  const views = buildProjections(next.code, next.server.gameState, next.members);
+  views.public.revision = (previous?.public.revision ?? 0) +
+    (!previous || withoutRevision(previous.public) !== withoutRevision(views.public) ? 1 : 0);
+  for (const [uid, view] of Object.entries(views.private)) {
+    const before = previous?.private[uid];
+    view.revision = (before?.revision ?? 0) + (!before || withoutRevision(before) !== withoutRevision(view) ? 1 : 0);
   }
-  return code;
+  return { ...next, ...views, server: { ...next.server, revision: (previous?.server.revision ?? 0) + 1 } };
+}
+function creationRequest(value: unknown): { code: string; fingerprint: string; createdAt: number } {
+  if (!value || typeof value !== 'object') throw new InvalidRoomDataError();
+  const data = value as Record<string, unknown>;
+  if (typeof data.code !== 'string' || !/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/.test(data.code) ||
+      typeof data.fingerprint !== 'string' || typeof data.createdAt !== 'number' || !Number.isSafeInteger(data.createdAt)) throw new InvalidRoomDataError();
+  return { code: data.code, fingerprint: data.fingerprint, createdAt: data.createdAt };
 }
 
-/** In-memory store fallback for isolated unit testing */
-export const memoryRooms = new Map<string, RoomRecord>();
-
-export interface RoomRecord {
-  code: string;
-  members: Record<
-    string,
-    { uid: string; displayName: string; avatarId: string; seat: 0 | 1; isHost: boolean }
-  >;
-  public: {
-    code: string;
-    phase: GameState['phase'];
-    matchId: string;
-    roundIndex: number;
-    clueIndex: number;
-    matchScores: [number, number];
-    players: [PlayerSeat | null, PlayerSeat | null];
-    scenario: Scenario | null;
-    revealedAnswers: Array<{ clueIndex: number; answers: [string, string] }>;
-    roundSummary: GameState['roundHistory'][number] | null;
-    rematchRequests: [boolean, boolean];
-  };
-  private: Record<
-    string,
-    {
-      role: RoleId | null;
-      guess: RoleId | null;
-      guessClueIndex: number | null;
-      committedAnswer: string | null;
-      hasGuessed: boolean;
-    }
-  >;
-  server: {
-    gameState: GameState;
-    matchDeck: Scenario[][] | null;
-    receipts: Record<string, { timestamp: number; type: string }>;
-    expiresAt: number;
-  };
-}
-
-/**
- * Helper to synchronize public and private projections from authoritative GameState.
- */
-export function buildProjections(
-  code: string,
-  state: GameState,
-  members: RoomRecord['members']
-): {
-  public: RoomRecord['public'];
-  private: RoomRecord['private'];
-} {
-  const currentScenario =
-    state.currentRound && state.currentRound.scenarios[state.clueIndex]
-      ? state.currentRound.scenarios[state.clueIndex]
-      : null;
-
-  const roundSummary =
-    (state.phase === 'ROUND_REVEAL' || state.phase === 'MATCH_RESULT') &&
-    state.roundHistory.length > 0
-      ? state.roundHistory[state.roundHistory.length - 1]
-      : null;
-
-  const publicProjection: RoomRecord['public'] = {
-    code,
-    phase: state.phase,
-    matchId: state.matchId,
-    roundIndex: state.roundIndex,
-    clueIndex: state.clueIndex,
-    matchScores: state.matchScores,
-    players: state.seats,
-    scenario: currentScenario,
-    revealedAnswers: state.currentRound ? state.currentRound.revealedAnswers : [],
-    roundSummary,
-    rematchRequests: state.rematchRequests,
-  };
-
-  const privateProjection: RoomRecord['private'] = {};
-  for (const uid of Object.keys(members)) {
-    const seat = members[uid].seat;
-    const proj = getPlayerProjection(state, seat);
-    privateProjection[uid] = {
-      role: proj.myRole,
-      guess: proj.myGuessedRole,
-      guessClueIndex: proj.myGuessedClueIndex,
-      committedAnswer: proj.myCommittedAnswer,
-      hasGuessed: proj.hasGuessed,
-    };
+/** Independent service instances carry no shared room state. */
+export function createRoomService(store: RoomStore, options: {
+  codeGenerator?: () => string; clock?: () => number;
+  rolePair?: typeof generateRolePair; deck?: () => Scenario[][];
+} = {}) {
+  const codeGenerator = options.codeGenerator ?? generateRoomCode;
+  const clock = options.clock ?? Date.now;
+  const roles = options.rolePair ?? generateRolePair;
+  const deckForMatch = options.deck ?? selectMatchDeck;
+  const mutate = (code: string, change: (room: RoomRecord | null) => TransactionUpdate<ActionResult>) =>
+    store.transact(`rooms/${code}`, raw => change(decodeRoomRecord(raw, code)));
+  function memberError(room: RoomRecord | null, uid: string, now: number): string | null {
+    if (!room) return 'Room not found';
+    if (!Object.hasOwn(room.members, uid)) return 'Not a member of this room';
+    if (now >= room.server.expiresAt) return 'Room expired';
+    return null;
   }
-
-  return { public: publicProjection, private: privateProjection };
-}
-
-function isLiveDbConfigured(): boolean {
-  if (process.env.NODE_ENV === 'test') {
-    return Boolean(process.env.FIREBASE_DATABASE_EMULATOR_HOST);
+  async function execute(codeInput: string, uid: string, input: unknown, lobby = false): Promise<ActionResult> {
+    const code = roomCode(codeInput);
+    const envelope = parseEnvelope(input, lobby);
+    const { actionId, matchId, roundId, clueIndex, action } = envelope;
+    const now = clock();
+    await enforceRateLimit(store, uid, lobby ? 'room' : 'game', now);
+    // Stable material is prepared once, outside the CAS callback.
+    const rolePair = action.type === 'NEXT_ROUND_READY' || action.type === 'START_MATCH' ? roles() : undefined;
+    const deck = action.type === 'START_MATCH' ? deckForMatch() : undefined;
+    const nextMatchId = action.type === 'REMATCH_REQUEST' ? randomUUID() : undefined;
+    const key = createHash('sha256').update(JSON.stringify([uid, actionId])).digest('hex');
+    const fingerprint = createHash('sha256').update(JSON.stringify(envelope)).digest('hex');
+    return mutate(code, room => {
+      const commitTime = clock();
+      if (!room) return fail('Room not found');
+      if (commitTime >= room.server.expiresAt) return fail('Room expired', 410);
+      // Only leave receipts remain usable after membership is removed.
+      if (action.type !== 'PLAYER_LEAVE') {
+        const error = memberError(room, uid, commitTime);
+        if (error) return fail(error);
+      }
+      // A replay is checked before context/phase: a successful command may have advanced them.
+      const receipt = room.server.receipts[key];
+      if (receipt) {
+        return receipt.uid === uid && receipt.type === action.type && receipt.matchId === matchId &&
+          receipt.roundId === roundId && receipt.clueIndex === clueIndex && receipt.fingerprint === fingerprint
+          ? { result: success } : fail('Duplicate actionId with mismatched payload');
+      }
+      if (!Object.hasOwn(room.members, uid)) return fail('Not a member of this room');
+      const state = room.server.gameState;
+      if (state.matchId !== matchId || (action.type !== 'PLAYER_LEAVE' && (room.public.roundId !== roundId || state.clueIndex !== clueIndex))) {
+        return fail('คำสั่งมาจากเกม รอบ หรือข้อเก่า กรุณาโหลดสถานะห้องใหม่');
+      }
+      if (action.type === 'START_MATCH' && !room.members[uid].isHost) return fail('Only host can start the match');
+      const seat = room.members[uid].seat;
+      let command: GameAction;
+      switch (action.type) {
+        case 'START_MATCH': command = { type: 'START_MATCH', rolePair, scenarios: deck![0] }; break;
+        case 'NEXT_ROUND_READY': command = { type: action.type, seat, nextRolePair: rolePair, nextScenarios: room.server.matchDeck?.[state.roundIndex + 1] }; break;
+        case 'REMATCH_REQUEST': command = { type: action.type, seat, nextMatchId }; break;
+        case 'SUBMIT_ANSWER': case 'REVEAL_ACK': case 'SUBMIT_DECISION': command = { ...action, seat, clueIndex }; break;
+        default: command = { ...action, seat };
+      }
+      const result = processAction(state, command);
+      if (!result.success) return fail(result.error!);
+      if (action.type !== 'PLAYER_LEAVE' && Object.keys(room.server.receipts).length >= 4096) return fail('ห้องนี้รับคำสั่งครบจำนวนแล้ว กรุณาสร้างห้องใหม่');
+      const members = action.type === 'PLAYER_LEAVE'
+        ? Object.fromEntries(result.state.seats.filter(seat => seat !== null).map(player => [player.uid, {
+          uid: player.uid, displayName: player.displayName, avatarId: player.avatarId, seat: player.seat, isHost: player.isHost,
+        }])) : room.members;
+      const next = prepareCommit(room, {
+        ...room, members, server: {
+          ...room.server, gameState: result.state,
+          expiresAt: JSON.stringify(state) !== JSON.stringify(result.state)
+            ? Math.max(room.server.expiresAt, commitTime + ROOM_TTL) : room.server.expiresAt,
+          matchDeck: action.type === 'START_MATCH' ? deck! : result.state.phase === 'LOBBY' && action.type === 'REMATCH_REQUEST' ? null : room.server.matchDeck,
+          receipts: { ...room.server.receipts, [key]: { timestamp: commitTime, type: action.type, uid, matchId, roundId, clueIndex, fingerprint } },
+        },
+      });
+      return { value: next, result: success };
+    });
   }
-  return Boolean(
-    process.env.FIREBASE_DATABASE_EMULATOR_HOST ||
-      (isAdminInitializedWithCredentials &&
-        process.env.FIREBASE_CLIENT_EMAIL &&
-        process.env.FIREBASE_PRIVATE_KEY)
-  );
-}
-
-async function syncRoomToDatabase(code: string, room: RoomRecord): Promise<void> {
-  if (!isLiveDbConfigured()) return;
-  try {
-    await Promise.race([
-      adminDb.ref(`rooms/${code}`).set(room),
-      new Promise<void>((_, reject) =>
-        setTimeout(() => reject(new Error('RTDB sync timeout')), 2500)
-      ),
-    ]);
-  } catch (err) {
-    console.warn(`Failed to sync room ${code} to RTDB:`, err);
-  }
-}
-
-async function fetchRoomFromDatabase(code: string): Promise<RoomRecord | null> {
-  if (!isLiveDbConfigured()) return null;
-  try {
-    const snap = await Promise.race([
-      adminDb.ref(`rooms/${code}`).get(),
-      new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), 2500)
-      ),
-    ]);
-    if (snap && snap.exists()) {
-      return snap.val() as RoomRecord;
-    }
-  } catch (err) {
-    console.warn(`Failed to fetch room ${code} from RTDB:`, err);
-  }
-  return null;
-}
-
-/**
- * Creates a new game room.
- */
-export async function createRoom(
-  hostUid: string,
-  displayName: string,
-  avatarId: string
-): Promise<{ code: string; seat: 0 }> {
-  const code = generateRoomCode();
-  const gameState = createInitialGameState(code);
-
-  // Seat host at 0
-  const joinRes = processAction(gameState, {
-    type: 'PLAYER_JOIN',
-    seat: 0,
-    uid: hostUid,
-    displayName,
-    avatarId,
-    isHost: true,
-  });
-
-  const members: RoomRecord['members'] = {
-    [hostUid]: { uid: hostUid, displayName, avatarId, seat: 0, isHost: true },
-  };
-
-  const { public: pubProj, private: privProj } = buildProjections(code, joinRes.state, members);
-
-  const roomRecord: RoomRecord = {
-    code,
-    members,
-    public: pubProj,
-    private: privProj,
-    server: {
-      gameState: joinRes.state,
-      matchDeck: null,
-      receipts: {},
-      expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  return {
+    async createRoom(hostUid: string, displayName: string, avatarId: string, requestId: string = randomUUID()): Promise<{ code: string; seat: 0 }> {
+      ({ displayName, avatarId } = profile(displayName, avatarId));
+      createRequestId(requestId);
+      const now = clock();
+      await enforceRateLimit(store, hostUid, 'create', now);
+      const fingerprint = createHash('sha256').update(JSON.stringify([hostUid, displayName, avatarId])).digest('hex');
+      const key = createHash('sha256').update(JSON.stringify([hostUid, requestId])).digest('hex');
+      const path = `roomCreationRequests/${key}`;
+      const initialCode = codeGenerator();
+      let reservation = await store.transact(path, raw => {
+        if (raw === null) {
+          const value = { code: initialCode, fingerprint, createdAt: now };
+          return { value, result: value };
+        }
+        const current = creationRequest(raw);
+        if (current.fingerprint !== fingerprint) throw new RoomServiceError('คำขอสร้างห้องเดิมมีข้อมูลไม่ตรงกัน', 409);
+        return { result: current };
+      });
+      const matchId = randomUUID();
+      for (let attempt = 0; attempt < 10; attempt++) {
+        if (now >= reservation.createdAt + ROOM_TTL) throw new RoomServiceError('คำขอสร้างห้องหมดอายุ กรุณาสร้างคำขอใหม่', 410);
+        const code = reservation.code;
+        const gameState = processAction(createInitialGameState(code, matchId), {
+          type: 'PLAYER_JOIN', seat: 0, uid: hostUid, displayName, avatarId, isHost: true,
+        }).state;
+        const members: RoomRecord['members'] = { [hostUid]: { uid: hostUid, displayName, avatarId, seat: 0, isHost: true } };
+        const candidate = prepareCommit(null, {
+          schemaVersion: ROOM_SCHEMA_VERSION, code, members, ...buildProjections(code, gameState, members),
+          server: {
+            gameState, matchDeck: null, receipts: {}, expiresAt: reservation.createdAt + ROOM_TTL,
+            creation: { uid: hostUid, requestId, fingerprint },
+          },
+        });
+        const claimed = await store.transact(`rooms/${code}`, raw => {
+          if (clock() >= candidate.server.expiresAt) throw new RoomServiceError('คำขอสร้างห้องหมดอายุ กรุณาสร้างคำขอใหม่', 410);
+          if (raw === null) return { value: candidate, result: true };
+          const existing = raw as { server?: { creation?: RoomRecord['server']['creation'] } };
+          const receipt = existing.server?.creation;
+          if (receipt?.uid === hostUid && receipt.requestId === requestId && receipt.fingerprint === fingerprint) {
+            const room = decodeRoomRecord(raw, code)!;
+            if (clock() >= room.server.expiresAt) throw new RoomServiceError('Room expired', 410);
+            return { result: true };
+          }
+          return { result: false }; // Occupied/malformed rooms are never overwritten.
+        });
+        if (claimed) return { code, seat: 0 };
+        const nextCode = codeGenerator();
+        reservation = await store.transact(path, raw => {
+          const current = creationRequest(raw);
+          if (current.code !== code) return { result: current };
+          const value = { ...current, code: nextCode };
+          return { value, result: value };
+        });
+      }
+      throw new RoomServiceError('ยังจองรหัสห้องไม่ได้ กรุณาลองคำขอเดิมอีกครั้ง', 503, true);
+    },
+    async joinRoom(code: string, uid: string, displayName: string, avatarId: string): Promise<ActionResult & { seat?: 0 | 1 }> {
+      code = roomCode(code);
+      ({ displayName, avatarId } = profile(displayName, avatarId));
+      const now = clock();
+      await enforceRateLimit(store, uid, 'room', now);
+      return store.transact<ActionResult & { seat?: 0 | 1 }>(`rooms/${code}`, raw => {
+        const commitTime = clock();
+        const room = decodeRoomRecord(raw, code);
+        if (!room) return fail('Room not found or expired');
+        if (commitTime >= room.server.expiresAt) return fail('Room expired', 410);
+        if (room.server.gameState.phase === 'CLOSED') return fail('ห้องนี้ปิดแล้ว กรุณาสร้างห้องใหม่');
+        if (Object.hasOwn(room.members, uid)) return { result: { success: true, seat: room.members[uid].seat } };
+        if (room.server.gameState.phase !== 'LOBBY') return fail('ไม่สามารถเข้าร่วมแทนผู้เล่นระหว่างเกมหรือเกมที่ยุติแล้ว');
+        const seat = room.server.gameState.seats.findIndex(player => player === null) as 0 | 1 | -1;
+        if (seat === -1) return fail('ห้องเต็มแล้ว (เล่นได้สูงสุด 2 คน)');
+        const result = processAction(room.server.gameState, { type: 'PLAYER_JOIN', seat, uid, displayName, avatarId, isHost: false });
+        if (!result.success) return fail(result.error!);
+        const next = prepareCommit(room, {
+          ...room, members: { ...room.members, [uid]: { uid, displayName, avatarId, seat, isHost: false } },
+          server: { ...room.server, gameState: result.state, expiresAt: Math.max(room.server.expiresAt, commitTime + ROOM_TTL) },
+        });
+        return { value: next, result: { success: true, seat } };
+      });
+    },
+    async setPlayerReady(code: string, uid: string, ready: boolean, context: ActionContext): Promise<ActionResult> {
+      return execute(code, uid, { ...context, action: { type: 'PLAYER_READY', ready } }, true);
+    },
+    async startMatch(code: string, uid: string, context: ActionContext): Promise<ActionResult> {
+      return execute(code, uid, { ...context, action: { type: 'START_MATCH' } }, true);
+    },
+    async leaveRoom(code: string, uid: string, context: ActionContext): Promise<ActionResult> {
+      return execute(code, uid, { ...context, action: { type: 'PLAYER_LEAVE' } }, true);
+    },
+    async dispatchGameAction(code: string, uid: string, envelope: unknown): Promise<ActionResult> {
+      return execute(code, uid, envelope);
+    },
+    async getRoomProjections(code: string, uid: string) {
+      code = roomCode(code);
+      await enforceRateLimit(store, uid, 'read', clock());
+      const room = decodeRoomRecord(await store.read(`rooms/${code}`), code);
+      if (!room) throw new RoomServiceError('Room not found', 404);
+      if (!Object.hasOwn(room.members, uid)) throw new RoomServiceError('Not a member of this room', 403);
+      if (clock() >= room.server.expiresAt) throw new RoomServiceError('Room expired', 410);
+      const member = room.members[uid];
+      return { public: room.public, private: room.private[uid], seat: member.seat, isHost: member.isHost };
     },
   };
-
-  // Save to memory store
-  memoryRooms.set(code, roomRecord);
-
-  // Sync to RTDB if live DB is configured
-  await syncRoomToDatabase(code, roomRecord);
-
-  return { code, seat: 0 };
 }
-
-/**
- * Joins an existing room with atomic seat assignment.
- */
-export async function joinRoom(
-  code: string,
-  uid: string,
-  displayName: string,
-  avatarId: string
-): Promise<{ success: boolean; seat?: 0 | 1; error?: string }> {
-  let room = memoryRooms.get(code);
-
-  // If not in memory, try fetching from RTDB
-  if (!room) {
-    room = (await fetchRoomFromDatabase(code)) ?? undefined;
-    if (room) {
-      memoryRooms.set(code, room);
-    }
-  }
-
-  if (!room) {
-    return { success: false, error: 'Room not found or expired' };
-  }
-
-  if (Date.now() > room.server.expiresAt) {
-    return { success: false, error: 'Room expired' };
-  }
-
-  // Check if user is already a member (reconnect / refresh)
-  if (room.members[uid]) {
-    return { success: true, seat: room.members[uid].seat };
-  }
-
-  // Check if room is full (seat 1 occupied)
-  if (room.server.gameState.seats[1] !== null) {
-    return { success: false, error: 'ห้องเต็มแล้ว (เล่นได้สูงสุด 2 คน)' };
-  }
-
-  // Assign seat 1 to the new player
-  const joinRes = processAction(room.server.gameState, {
-    type: 'PLAYER_JOIN',
-    seat: 1,
-    uid,
-    displayName,
-    avatarId,
-    isHost: false,
-  });
-
-  if (!joinRes.success) {
-    return { success: false, error: joinRes.error };
-  }
-
-  room.members[uid] = { uid, displayName, avatarId, seat: 1, isHost: false };
-  room.server.gameState = joinRes.state;
-
-  const { public: pubProj, private: privProj } = buildProjections(code, room.server.gameState, room.members);
-  room.public = pubProj;
-  room.private = privProj;
-
-  memoryRooms.set(code, room);
-  await syncRoomToDatabase(code, room);
-
-  return { success: true, seat: 1 };
-}
-
-/**
- * Sets player ready status in lobby.
- */
-export async function setPlayerReady(
-  code: string,
-  uid: string,
-  ready: boolean
-): Promise<{ success: boolean; error?: string }> {
-  const room = memoryRooms.get(code);
-  if (!room || !room.members[uid]) {
-    return { success: false, error: 'Player or room not found' };
-  }
-
-  const seat = room.members[uid].seat;
-  const res = processAction(room.server.gameState, {
-    type: 'PLAYER_READY',
-    seat,
-    ready,
-  });
-
-  if (!res.success) {
-    return { success: false, error: res.error };
-  }
-
-  room.server.gameState = res.state;
-  const { public: pubProj, private: privProj } = buildProjections(code, room.server.gameState, room.members);
-  room.public = pubProj;
-  room.private = privProj;
-
-  memoryRooms.set(code, room);
-  await syncRoomToDatabase(code, room);
-
-  return { success: true };
-}
-
-/**
- * Starts match by host.
- */
-export async function startMatch(
-  code: string,
-  uid: string
-): Promise<{ success: boolean; error?: string }> {
-  const room = memoryRooms.get(code);
-  if (!room || !room.members[uid]) {
-    return { success: false, error: 'Room or player not found' };
-  }
-  if (!room.members[uid].isHost) {
-    return { success: false, error: 'Only host can start the match' };
-  }
-
-  // Generate 16 scenarios (4 rounds * 4 clues)
-  const deck = selectMatchDeck();
-  const rolePair = generateRolePair();
-
-  const res = processAction(room.server.gameState, {
-    type: 'START_MATCH',
-    scenarios: deck[0], // Round 0 scenarios
-    rolePair,
-  });
-
-  if (!joinResSafe(res)) {
-    return { success: false, error: res.error };
-  }
-
-  room.server.gameState = res.state;
-  room.server.matchDeck = deck;
-
-  const { public: pubProj, private: privProj } = buildProjections(code, room.server.gameState, room.members);
-  room.public = pubProj;
-  room.private = privProj;
-
-  memoryRooms.set(code, room);
-  await syncRoomToDatabase(code, room);
-
-  return { success: true };
-}
-
-function joinResSafe(res: { success: boolean; error?: string }): boolean {
-  return res.success;
-}
-
-/**
- * Dispatches a player game action with idempotency enforcement.
- */
-export async function dispatchGameAction(
-  code: string,
-  uid: string,
-  actionId: string,
-  action: GameAction
-): Promise<{ success: boolean; error?: string }> {
-  const room = memoryRooms.get(code);
-  if (!room) {
-    return { success: false, error: 'Room not found' };
-  }
-  if (!room.members[uid]) {
-    return { success: false, error: 'Not a member of this room' };
-  }
-  if (Date.now() > room.server.expiresAt) {
-    return { success: false, error: 'Room expired' };
-  }
-
-  // Idempotency check: if actionId was already processed, verify payload matches
-  const existingReceipt = room.server.receipts[actionId];
-  if (existingReceipt) {
-    if (existingReceipt.type !== action.type) {
-      return { success: false, error: 'Duplicate actionId with mismatched payload' };
-    }
-    return { success: true };
-  }
-
-  // If next round ready, provide deck for the next round
-  if (action.type === 'NEXT_ROUND_READY' && room.server.matchDeck) {
-    const nextRoundIndex = room.server.gameState.roundIndex + 1;
-    if (nextRoundIndex < room.server.matchDeck.length) {
-      action.nextScenarios = room.server.matchDeck[nextRoundIndex];
-      action.nextRolePair = generateRolePair();
-    }
-  }
-
-  const res = processAction(room.server.gameState, action);
-  if (!res.success) {
-    return { success: false, error: res.error };
-  }
-
-  room.server.gameState = res.state;
-  room.server.receipts[actionId] = {
-    timestamp: Date.now(),
-    type: action.type,
-  };
-
-  const { public: pubProj, private: privProj } = buildProjections(code, room.server.gameState, room.members);
-  room.public = pubProj;
-  room.private = privProj;
-
-  memoryRooms.set(code, room);
-  await syncRoomToDatabase(code, room);
-
-  return { success: true };
-}
-
-/**
- * Retrieves public and private player projections for a given user.
- */
-export async function getRoomProjections(
-  code: string,
-  uid: string
-): Promise<{
-  public: RoomRecord['public'];
-  private: RoomRecord['private'][string] | null;
-  seat: 0 | 1 | null;
-  isHost: boolean;
-}> {
-  let room = memoryRooms.get(code);
-  if (!room) {
-    room = (await fetchRoomFromDatabase(code)) ?? undefined;
-    if (room) memoryRooms.set(code, room);
-  }
-  if (!room) {
-    throw new Error('Room not found');
-  }
-  const member = room.members[uid];
-  return {
-    public: room.public,
-    private: member ? room.private[uid] ?? null : null,
-    seat: member ? member.seat : null,
-    isHost: member ? member.isHost : false,
-  };
-}
-
+export const createRoom = (uid: string, name: string, avatar: string, requestId?: string) => createRoomService(getRoomStore()).createRoom(uid, name, avatar, requestId);
+export const joinRoom = (code: string, uid: string, name: string, avatar: string) => createRoomService(getRoomStore()).joinRoom(code, uid, name, avatar);
+export const setPlayerReady = (code: string, uid: string, ready: boolean, context: ActionContext) => createRoomService(getRoomStore()).setPlayerReady(code, uid, ready, context);
+export const startMatch = (code: string, uid: string, context: ActionContext) => createRoomService(getRoomStore()).startMatch(code, uid, context);
+export const leaveRoom = (code: string, uid: string, context: ActionContext) => createRoomService(getRoomStore()).leaveRoom(code, uid, context);
+export const dispatchGameAction = (code: string, uid: string, envelope: unknown) => createRoomService(getRoomStore()).dispatchGameAction(code, uid, envelope);
+export const getRoomProjections = (code: string, uid: string) => createRoomService(getRoomStore()).getRoomProjections(code, uid);

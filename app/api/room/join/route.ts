@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { roomJson } from '@/lib/server/roomJson';
 import { verifyAuthToken } from '@/lib/server/auth';
 import { joinRoom } from '@/lib/server/roomService';
+import { roomHttpError } from '@/lib/server/roomHttpError';
+import { fields, profile, readBody, roomCode } from '@/lib/server/commandSchema';
 
 
 export async function POST(req: Request) {
   try {
     const auth = await verifyAuthToken(req);
     if (!auth) {
-      return NextResponse.json(
+      return roomJson(
         {
           error:
             'Unauthorized: ไม่สามารถยืนยันตัวตนได้ (โปรดตรวจสอบ /api/diagnostics ว่า FIREBASE_CLIENT_EMAIL และ FIREBASE_PRIVATE_KEY บน Vercel พร้อมใช้งานหรือไม่)',
@@ -16,21 +18,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const body = await req.json().catch(() => ({}));
-    const code = typeof body.code === 'string' ? body.code.toUpperCase().trim() : '';
-    const displayName = typeof body.displayName === 'string' ? body.displayName.trim() : 'Player 2';
-    const avatarId = typeof body.avatarId === 'string' ? body.avatarId : 'fox';
-
-    if (!code) {
-      return NextResponse.json({ error: 'Missing room code' }, { status: 400 });
-    }
+    const body = fields(await readBody(req), ['code', 'displayName', 'avatarId']);
+    const code = roomCode(body.code);
+    const { displayName, avatarId } = profile(body.displayName, body.avatarId);
 
     const result = await joinRoom(code, auth.uid, displayName, avatarId);
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 403 });
+      return roomJson({ error: result.error }, { status: result.status ?? 403 });
     }
 
-    return NextResponse.json(
+    return roomJson(
       { code, seat: result.seat },
       {
         status: 200,
@@ -38,8 +35,6 @@ export async function POST(req: Request) {
       }
     );
   } catch (err: unknown) {
-    console.error('POST /api/room/join error:', err);
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return roomHttpError(err);
   }
 }

@@ -11,7 +11,9 @@
     "validate:content": "vitest run tests/unit/content.test.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "cleanup:rooms": "node scripts/cleanup-rooms.mjs",
+    "verify:acceptance": "node scripts/verify-acceptance.mjs"
   },
   "dependencies": {
     "firebase": "^13.0.0",

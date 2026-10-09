@@ -1,26 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { Scenario, PlayerSeat } from '@/lib/game/types';
+import type { Scenario, PlayerSeat, RevealedEvidence } from '@/lib/game/types';
 
 interface AnswerRevealViewProps {
+  hasAcknowledged?: boolean;
+  actionBlocked?: boolean;
   scenario: Scenario | null;
   clueIndex: number;
   mySeat: 0 | 1;
   players: [PlayerSeat | null, PlayerSeat | null];
   revealedAnswers: Array<{ clueIndex: number; answers: [string, string] }>;
+  evidence?: RevealedEvidence[];
   onAcknowledgeReveal: () => Promise<void>;
 }
 
 export default function AnswerRevealView({
+  actionBlocked = false,
+  hasAcknowledged = false,
   scenario,
   clueIndex,
   mySeat,
   players,
   revealedAnswers,
+  evidence = [],
   onAcknowledgeReveal,
 }: AnswerRevealViewProps) {
-  const [hasAcknowledged, setHasAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const opponentSeat = mySeat === 0 ? 1 : 0;
@@ -32,17 +37,19 @@ export default function AnswerRevealView({
   const myAnswerId = currentRevealed?.answers[mySeat];
   const opponentAnswerId = currentRevealed?.answers[opponentSeat];
 
-  const getOptionLabel = (optionId: string | undefined): string => {
+  const getOptionLabel = (optionId: string | undefined, seat: 0 | 1): string => {
+    const captured = evidence.find(entry => entry.clueIndex === clueIndex)?.answers[seat];
+    if (captured !== undefined) return captured;
     if (!optionId || !scenario) return '—';
     const found = scenario.options.find((o) => o.id === optionId);
-    return found ? found.label : optionId;
+    return found ? found.label : 'ไม่พบข้อความคำตอบ';
   };
 
   const handleAcknowledge = async () => {
+    if (actionBlocked || isSubmitting || hasAcknowledged) return;
     setIsSubmitting(true);
     try {
       await onAcknowledgeReveal();
-      setHasAcknowledged(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -71,7 +78,7 @@ export default function AnswerRevealView({
             </div>
           </div>
           <div className="reveal-answer-box">
-            {getOptionLabel(myAnswerId)}
+            {getOptionLabel(myAnswerId, mySeat)}
           </div>
         </div>
 
@@ -87,7 +94,7 @@ export default function AnswerRevealView({
             </div>
           </div>
           <div className="reveal-answer-box">
-            {getOptionLabel(opponentAnswerId)}
+            {getOptionLabel(opponentAnswerId, opponentSeat)}
           </div>
         </div>
       </div>
@@ -102,9 +109,11 @@ export default function AnswerRevealView({
               .map((r) => (
                 <div key={r.clueIndex} className="evidence-item">
                   <span className="evidence-clue-badge">ข้อ {r.clueIndex + 1}</span>
-                  <span className="evidence-text">
-                    {me?.displayName}: <em>{r.answers[mySeat]}</em> | {opponent?.displayName}: <em>{r.answers[opponentSeat]}</em>
-                  </span>
+                  <div className="evidence-text">
+                    <p>{evidence.find(entry => entry.clueIndex === r.clueIndex)?.prompt ?? 'ไม่มีสถานการณ์ของข้อเดิม'}</p>
+                    {me?.displayName}: <em>{evidence.find(entry => entry.clueIndex === r.clueIndex)?.answers[mySeat] ?? 'ไม่มีข้อความคำตอบของข้อเดิม'}</em>
+                    {' | '}{opponent?.displayName}: <em>{evidence.find(entry => entry.clueIndex === r.clueIndex)?.answers[opponentSeat] ?? 'ไม่มีข้อความคำตอบของข้อเดิม'}</em>
+                  </div>
                 </div>
               ))}
           </div>
@@ -122,7 +131,7 @@ export default function AnswerRevealView({
           <button
             className="btn btn-primary btn-lg proceed-btn proceed-decide-btn"
             onClick={handleAcknowledge}
-            disabled={isSubmitting}
+            disabled={isSubmitting || actionBlocked}
           >
             {isSubmitting ? 'กำลังบันทึก...' : 'วิเคราะห์เสร็จแล้ว ไปขั้นทายบทบาท! ➔'}
           </button>

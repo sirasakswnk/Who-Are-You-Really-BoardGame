@@ -1993,4 +1993,9 @@ body {
   overflow-y: auto;
 }
 
-
+/* Room synchronization and recoverable command errors. */
+.room-sync-status { padding: 0.65rem 1rem; text-align: center; font-size: 0.9rem; }
+.room-recovery-banner { max-width: 900px; margin: 0.5rem auto; padding: 1rem; border: 1px solid #a96824; border-radius: 0.75rem; background: #fff4dc; color: #503712; }
+.room-recovery-banner p { margin: 0 0 0.75rem; }
+.room-recovery-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.room-recovery-actions .btn { white-space: normal; }

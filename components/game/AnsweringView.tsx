@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Scenario } from '@/lib/game/types';
 
 interface AnsweringViewProps {
+  actionBlocked?: boolean;
   scenario: Scenario | null;
   clueIndex: number;
   myCommittedAnswer: string | null;
@@ -12,6 +13,7 @@ interface AnsweringViewProps {
 }
 
 export default function AnsweringView({
+  actionBlocked = false,
   scenario,
   clueIndex,
   myCommittedAnswer,
@@ -24,7 +26,7 @@ export default function AnsweringView({
   const hasCommitted = Boolean(myCommittedAnswer);
 
   const handleSubmit = async () => {
-    if (!selectedOptionId || hasCommitted) return;
+    if (!selectedOptionId || hasCommitted || isSubmitting || actionBlocked) return;
     setIsSubmitting(true);
     try {
       await onSubmitAnswer(selectedOptionId);
@@ -75,7 +77,7 @@ export default function AnsweringView({
         {opponentHasAnswered ? (
           <span className="opp-badge done">เพื่อนส่งคำตอบแล้ว ✓</span>
         ) : (
-          <span className="opp-badge pending">กำลังตัดสินใจเลือก...</span>
+          <span className="opp-badge pending">รอคำตอบครบทั้งสองคน</span>
         )}
       </div>
 
@@ -91,8 +93,8 @@ export default function AnsweringView({
             <button
               key={opt.id}
               className={`option-card ${isSelected ? 'selected' : ''} ${hasCommitted ? 'locked' : ''}`}
-              onClick={() => !hasCommitted && setSelectedOptionId(opt.id)}
-              disabled={hasCommitted}
+              onClick={() => !hasCommitted && !actionBlocked && !isSubmitting && setSelectedOptionId(opt.id)}
+              disabled={hasCommitted || isSubmitting || actionBlocked}
               role="radio"
               aria-checked={isSelected}
             >
@@ -122,7 +124,7 @@ export default function AnsweringView({
           <button
             className="btn btn-primary btn-lg submit-answer-btn"
             onClick={handleSubmit}
-            disabled={!selectedOptionId || isSubmitting}
+            disabled={!selectedOptionId || isSubmitting || actionBlocked}
           >
             {isSubmitting ? 'กำลังส่งคำตอบ...' : 'ยืนยันคำตอบ ➔'}
           </button>

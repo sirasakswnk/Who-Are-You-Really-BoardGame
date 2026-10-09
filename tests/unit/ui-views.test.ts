@@ -10,8 +10,107 @@ import AnswerRevealView from '@/components/game/AnswerRevealView';
 import DecidingView from '@/components/game/DecidingView';
 import RoundRevealView from '@/components/game/RoundRevealView';
 import MatchResultView from '@/components/game/MatchResultView';
+import AbandonedView from '@/components/game/AbandonedView';
+import RoomConnectionStatus from '@/components/game/RoomConnectionStatus';
+import { clientSnapshot } from '../helpers/clientSnapshot';
 import { SCENARIOS, stripEditorial } from '@/content/scenarios';
-import { ROLES, PlayerSeat } from '@/lib/game/types';
+import { ROLES, PlayerSeat, type RoundResult } from '@/lib/game/types';
+
+describe('F04 server-owned submission flags after reload', () => {
+  const scenario = stripEditorial(SCENARIOS[0]);
+  it('shows the role wait state from the persisted acknowledgement', () => {
+    const html = renderToString(React.createElement(RoleIntroView, {
+      myRole: 'saver', roundIndex: 0, hasAcknowledged: true, onAcknowledgeRole: async () => {},
+    }));
+    expect(html).toContain('กำลังรออีกฝ่าย'); expect(html).not.toContain('acknowledge-role-btn');
+  });
+  it('shows a locked answer after reload and does not offer another submission', () => {
+    const html = renderToString(React.createElement(AnsweringView, {
+      scenario, clueIndex: 0, myCommittedAnswer: scenario.options[0].id, opponentHasAnswered: false, onSubmitAnswer: async () => {},
+    }));
+    expect(html).toContain('ล็อกคำตอบแล้ว'); expect(html).not.toContain('submit-answer-btn');
+  });
+  it('shows the reveal wait state from the persisted acknowledgement', () => {
+    const html = renderToString(React.createElement(AnswerRevealView, {
+      scenario, clueIndex: 0, mySeat: 0, players: [mockPlayer0, mockPlayer1], revealedAnswers: [],
+      hasAcknowledged: true, onAcknowledgeReveal: async () => {},
+    }));
+    expect(html).toContain('รออีกฝ่ายพร้อม'); expect(html).not.toContain('proceed-decide-btn');
+  });
+  it.each([false, true])('shows a waiting decision with hasGuessed=%s instead of another continue/ack', hasGuessed => {
+    const html = renderToString(React.createElement(DecidingView, {
+      clueIndex: 0, myRole: 'saver', hasGuessed, myGuessedRole: hasGuessed ? 'comfort' : null,
+      myGuessedClueIndex: hasGuessed ? 0 : null, hasSubmitted: true, onSubmitDecision: async () => {},
+    }));
+    expect(html).toContain('รออีกฝ่ายพร้อม'); expect(html).not.toContain('continue-clue-btn');
+    expect(html).not.toContain('lock-guess-btn'); expect(html).not.toContain('proceed-btn');
+  });
+  it('shows next-round waiting from persisted readiness', () => {
+    const html = renderToString(React.createElement(RoundRevealView, {
+      roundSummary: { roundIndex: 0, roles: ['saver', 'comfort'], guesses: ['comfort', 'saver'], guessClueIndex: [0, 0], scores: [5, 5], reason: ['', ''] },
+      roundIndex: 0, mySeat: 0, players: [mockPlayer0, mockPlayer1], matchScores: [5, 5],
+      hasAcknowledged: true, onNextRoundReady: async () => {},
+    }));
+    expect(html).toContain('waiting-opponent-banner'); expect(html).not.toContain('next-round-btn');
+  });
+  it('disables an otherwise valid acknowledgement while a request is unresolved', () => {
+    const html = renderToString(React.createElement(RoleIntroView, {
+      myRole: 'saver', roundIndex: 0, hasAcknowledged: false, actionBlocked: true, onAcknowledgeRole: async () => {},
+    }));
+    expect(html).toMatch(/class="[^"]*acknowledge-role-btn[^"]*"[^>]*disabled=""/);
+  });
+});
+
+describe('F05 departure and connection UI', () => {
+  it('shows a termination reason without declaring a winner or revealing a role', () => {
+    const html = renderToString(React.createElement(AbandonedView, { displayName: 'คู่เล่น', busy: true, onLeave: () => {} }));
+    expect(html).toContain('ไม่มีผู้ชนะเต็มเกม'); expect(html).toContain('เกมยุติแล้ว');
+    expect(html).toMatch(/<button[^>]*disabled=""/); expect(html).not.toContain('saver');
+  });
+  it('distinguishes unknown presence from offline and shows retained seats after confirmed disconnection', () => {
+    const snapshot = clientSnapshot();
+    const unknown = renderToString(React.createElement(RoomConnectionStatus, { snapshot, presence: { known: false, online: {}, error: null } }));
+    expect(unknown).toContain('กำลังตรวจการเชื่อมต่อ'); expect(unknown).not.toContain('หลุดการเชื่อมต่อ');
+    const offline = renderToString(React.createElement(RoomConnectionStatus, { snapshot, presence: { known: true, online: {}, error: null } }));
+    expect(offline).toContain('ที่นั่งยังถูกเก็บไว้');
+  });
+  it('uses only the caller submission flag for the neutral barrier label while the opponent is online', () => {
+    const snapshot = clientSnapshot('DECIDING'); snapshot.private.decisionSubmitted = true;
+    const html = renderToString(React.createElement(RoomConnectionStatus, { snapshot, presence: { known: true, online: { guest: true }, error: null } }));
+    expect(html).toContain('สอง ออนไลน์'); expect(html).toContain('กำลังรอให้ครบทั้งสองคน');
+    expect(html).not.toContain('ทาย'); expect(html).not.toContain('saver');
+  });
+});
+
+describe('F06 content snapshots and persisted notes UI', () => {
+  it('renders previous answers from their own scenario snapshot even when option ids are reused', () => {
+    const scenario = { ...stripEditorial(SCENARIOS[0]), options: [{ id: 'raw-choice-a', label: 'ข้อความข้อปัจจุบัน' }, { id: 'raw-choice-b', label: 'ข้อความข้อปัจจุบัน B' }] };
+    const html = renderToString(React.createElement(AnswerRevealView, {
+      scenario, clueIndex: 1, mySeat: 0, players: [mockPlayer0, mockPlayer1], onAcknowledgeReveal: async () => {},
+      revealedAnswers: [{ clueIndex: 0, answers: ['raw-choice-a', 'raw-choice-b'] }, { clueIndex: 1, answers: ['raw-choice-a', 'raw-choice-b'] }],
+      evidence: [{ clueIndex: 0, scenarioId: 'old', scenarioVersion: 1, prompt: 'สถานการณ์เดิม', answers: ['คำตอบเดิม A', 'คำตอบเดิม B'] },
+        { clueIndex: 1, scenarioId: 'now', scenarioVersion: 2, prompt: 'สถานการณ์ปัจจุบัน', answers: ['ข้อความข้อปัจจุบัน', 'ข้อความข้อปัจจุบัน B'] }],
+    }));
+    for (const text of ['สถานการณ์เดิม', 'คำตอบเดิม A', 'คำตอบเดิม B', 'ข้อความข้อปัจจุบัน']) expect(html).toContain(text);
+    expect(html).not.toContain('raw-choice');
+  });
+  it('renders all completed evidence, guesses, guess timing and reasons with no raw role or option id', () => {
+    const html = renderToString(React.createElement(MatchResultView, {
+      mySeat: 1, players: [mockPlayer0, mockPlayer1], matchScores: [14, 14], rematchRequests: [false, false],
+      onRequestRematch: async () => {}, onBackToHome: () => {}, roundHistory: Array.from({ length: 4 }, (_, roundIndex): RoundResult => ({
+        roundIndex, roles: ['saver', 'comfort'], guesses: ['comfort', 'saver'], guessClueIndex: [roundIndex, roundIndex], scores: [5 - roundIndex, 5 - roundIndex],
+        reason: ['ทายตรงกับบทบาท', 'ทายตรงกับบทบาท'], evidence: [{ clueIndex: 0, scenarioId: 'unused-in-ui', scenarioVersion: 1, prompt: `หลักฐานรอบ ${roundIndex + 1}`, answers: ['คำตอบของคนแรก', 'คำตอบของคนที่สอง'] }],
+      })),
+    }));
+    for (const text of ['หลักฐานรอบ 1', 'หลักฐานรอบ 4', 'หลังข้อที่ 4', 'ทายตรงกับบทบาท', 'คำตอบของคนแรก', 'คำตอบของคนที่สอง']) expect(html).toContain(text);
+    expect(html).not.toContain('unused-in-ui'); expect(html).not.toContain('saver');
+  });
+  it('shows retained suspicion tags after the decision view remounts', () => {
+    const html = renderToString(React.createElement(DecidingView, { clueIndex: 2, myRole: 'saver', hasGuessed: false,
+      myGuessedRole: null, myGuessedClueIndex: null, scratchpad: { comfort: 'suspect', explorer: 'cleared' }, onSubmitDecision: async () => {} }));
+    expect(html).toContain('note-suspect'); expect(html).toContain('note-cleared'); expect(html).toContain('aria-pressed="true"');
+  });
+});
 
 const mockPlayer0: PlayerSeat = {
   uid: 'u1',

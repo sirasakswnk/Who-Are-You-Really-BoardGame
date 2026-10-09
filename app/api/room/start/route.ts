@@ -1,33 +1,28 @@
-import { NextResponse } from 'next/server';
+import { roomJson } from '@/lib/server/roomJson';
 import { verifyAuthToken } from '@/lib/server/auth';
 import { startMatch } from '@/lib/server/roomService';
+import { roomHttpError } from '@/lib/server/roomHttpError';
+import { CONTEXT_FIELDS, contextFromBody, fields, readBody, roomCode } from '@/lib/server/commandSchema';
 
 
 export async function POST(req: Request) {
   const auth = await verifyAuthToken(req);
   if (!auth) {
-    return NextResponse.json({ error: 'Unauthorized: missing or invalid token' }, { status: 401 });
+    return roomJson({ error: 'Unauthorized: missing or invalid token' }, { status: 401 });
   }
 
   try {
-    const body = await req.json();
-    const code = typeof body.code === 'string' ? body.code.toUpperCase().trim() : '';
-
-    if (!code) {
-      return NextResponse.json({ error: 'Missing room code' }, { status: 400 });
-    }
-
-    const result = await startMatch(code, auth.uid);
+    const body = fields(await readBody(req), ['code', ...CONTEXT_FIELDS]);
+    const result = await startMatch(roomCode(body.code), auth.uid, contextFromBody(body));
     if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+      return roomJson({ error: result.error }, { status: result.status ?? 400 });
     }
 
-    return NextResponse.json({ success: true }, {
+    return roomJson({ success: true }, {
       status: 200,
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Internal Server Error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return roomHttpError(err);
   }
 }

@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ensureAnonymousAuth, rtdb } from '@/lib/firebase/client';
-import { ref, onValue, off } from 'firebase/database';
-import {
-  PlayerSeat,
-  GamePhase,
-  Scenario,
-  RoundResult,
-  RoleId,
-  DecisionAction,
-} from '@/lib/game/types';
+import { auth, ensureAnonymousAuth, rtdb } from '@/lib/firebase/client';
+import { ref, onValue } from 'firebase/database';
+import { RoomSession, INITIAL_SESSION, type SessionState } from '@/lib/client/roomSession';
+import { createRoomApi } from '@/lib/client/roomApi';
+import type { ClientCommand } from '@/lib/game/commands';
+import type { ActionStorage } from '@/lib/client/pendingAction';
 import GameHeader from './GameHeader';
 import LobbyView from './LobbyView';
 import RoleIntroView from './RoleIntroView';
@@ -21,495 +17,181 @@ import DecidingView from './DecidingView';
 import RoundRevealView from './RoundRevealView';
 import MatchResultView from './MatchResultView';
 import RulesModal from './RulesModal';
+import AbandonedView from './AbandonedView';
+import RoomConnectionStatus from './RoomConnectionStatus';
+import { RoomPresence, firebasePresence, UNKNOWN_PRESENCE, type PresenceState } from '@/lib/client/roomPresence';
+import { RoundNotes, type SuspicionNotes } from '@/lib/client/roundNotes';
 
-interface GameContainerProps {
-  roomCode: string;
-}
-
-interface PublicState {
-  code: string;
-  phase: GamePhase;
-  matchId: string;
-  roundIndex: number;
-  clueIndex: number;
-  matchScores: [number, number];
-  players: [PlayerSeat | null, PlayerSeat | null];
-  scenario: Scenario | null;
-  revealedAnswers: Array<{ clueIndex: number; answers: [string, string] }>;
-  roundSummary: RoundResult | null;
-  rematchRequests: [boolean, boolean];
-}
-
-interface PrivateState {
-  role: RoleId | null;
-  guess: RoleId | null;
-  guessClueIndex: number | null;
-  committedAnswer: string | null;
-  hasGuessed: boolean;
-}
-
-function normalizePublicState(pub: Partial<PublicState> | null | undefined, code: string): PublicState {
-  return {
-    code: pub?.code || code,
-    phase: pub?.phase || 'LOBBY',
-    matchId: pub?.matchId || '',
-    roundIndex: pub?.roundIndex ?? 0,
-    clueIndex: pub?.clueIndex ?? 0,
-    matchScores: Array.isArray(pub?.matchScores)
-      ? [pub.matchScores[0] ?? 0, pub.matchScores[1] ?? 0]
-      : [0, 0],
-    players: Array.isArray(pub?.players)
-      ? [pub.players[0] ?? null, pub.players[1] ?? null]
-      : [null, null],
-    scenario: pub?.scenario ?? null,
-    revealedAnswers: Array.isArray(pub?.revealedAnswers) ? pub.revealedAnswers : [],
-    roundSummary: pub?.roundSummary ?? null,
-    rematchRequests: Array.isArray(pub?.rematchRequests)
-      ? [Boolean(pub.rematchRequests[0]), Boolean(pub.rematchRequests[1])]
-      : [false, false],
-  };
-}
-
-function normalizePrivateState(priv: Partial<PrivateState> | null | undefined): PrivateState {
-  return {
-    role: priv?.role ?? null,
-    guess: priv?.guess ?? null,
-    guessClueIndex: priv?.guessClueIndex ?? null,
-    committedAnswer: priv?.committedAnswer ?? null,
-    hasGuessed: Boolean(priv?.hasGuessed),
-  };
-}
-
-export default function GameContainer({ roomCode }: GameContainerProps) {
+export default function GameContainer({ roomCode }: { roomCode: string }) {
   const router = useRouter();
-
-  // Auth & Connection State
-  const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
-  const [mySeat, setMySeat] = useState<0 | 1>(0);
-  const [isHost, setIsHost] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [sessionState, setSessionState] = useState<SessionState>(INITIAL_SESSION);
+  const [bootstrapAttempt, setBootstrapAttempt] = useState(0);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
+  const sessionRef = useRef<RoomSession | null>(null);
+  const [presenceState, setPresenceState] = useState<PresenceState>(UNKNOWN_PRESENCE);
+  const presenceRef = useRef<RoomPresence | null>(null);
+  const notesRef = useRef<RoundNotes | null>(null);
+  const [notes, setNotes] = useState<SuspicionNotes>({});
 
-  // Synchronized Game State
-  const [publicState, setPublicState] = useState<PublicState>({
-    code: roomCode,
-    phase: 'LOBBY',
-    matchId: '',
-    roundIndex: 0,
-    clueIndex: 0,
-    matchScores: [0, 0],
-    players: [null, null],
-    scenario: null,
-    revealedAnswers: [],
-    roundSummary: null,
-    rematchRequests: [false, false],
-  });
-
-  const [privateState, setPrivateState] = useState<PrivateState>({
-    role: null,
-    guess: null,
-    guessClueIndex: null,
-    committedAnswer: null,
-    hasGuessed: false,
-  });
-
-  // Local interaction flags
-  const [ackedRound, setAckedRound] = useState<number | null>(null);
-  const roleAcked = ackedRound === publicState.roundIndex;
-
-  const tokenRef = useRef<string | null>(null);
-
-  // 1. Authenticate anonymously and sync room
   useEffect(() => {
-    let isMounted = true;
-
-    async function initSession() {
+    let active = true, expired = false;
+    const cleanups: Array<() => void> = [];
+    let session: RoomSession | null = null;
+    let presence: RoomPresence | null = null;
+    const timeout = setTimeout(() => {
+      expired = true;
+      if (active && !session) setSessionState({ ...INITIAL_SESSION, loading: false, connectionError: 'เชื่อมต่อบัญชีผู้เล่นไม่สำเร็จ กรุณาลองเชื่อมต่อใหม่' });
+    }, 12_000);
+    async function initialize() {
       try {
         const user = await ensureAnonymousAuth();
-        if (!isMounted) return;
-
-        const token = await user.getIdToken();
-        tokenRef.current = token;
-        setCurrentUserUid(user.uid);
-
-        // Fetch initial projection from API
-        const res = await fetch(`/api/room/${roomCode}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        const text = await res.text();
-        let data: {
-          error?: string;
-          seat?: number;
-          isHost?: boolean;
-          public?: unknown;
-          private?: unknown;
-        } | null = null;
-        if (text) {
+        if (!active || expired) return;
+        clearTimeout(timeout);
+        let storage: ActionStorage | null = null;
+        try { storage = window.sessionStorage; } catch { /* Keep pending requests in this tab's controller. */ }
+        let notesStorage: ActionStorage | null = null;
+        try { notesStorage = window.localStorage; } catch { /* Notes still survive phase changes in memory. */ }
+        const notesController = new RoundNotes(notesStorage, user.uid, roomCode, value => { if (active) setNotes(value); });
+        notesRef.current = notesController;
+        cleanups.push(() => { if (notesRef.current === notesController) notesRef.current = null; });
+        session = new RoomSession(roomCode, user.uid, createRoomApi(() => auth.currentUser, user.uid), storage,
+          state => {
+            if (!active) return;
+            setSessionState(state);
+            if (state.snapshot && !state.synchronizing) notesController.activate(state.snapshot.public);
+            if (state.left) presence?.dispose();
+            if (state.snapshot && !state.left && !presence) {
+              try {
+                presence = new RoomPresence(firebasePresence(rtdb, roomCode, user.uid),
+                  value => { if (active) setPresenceState(value); });
+                presenceRef.current = presence;
+                presence.start();
+              } catch { setPresenceState({ ...UNKNOWN_PRESENCE, error: 'ยังตรวจการเชื่อมต่อของคู่เล่นไม่ได้' }); }
+            }
+          });
+        const controller = session;
+        sessionRef.current = controller;
+        controller.setOnline(navigator.onLine);
+        for (const kind of ['public', 'private'] as const) {
+          const path = kind === 'public' ? `rooms/${roomCode}/public` : `rooms/${roomCode}/private/${user.uid}`;
           try {
-            data = JSON.parse(text);
-          } catch {
-            // not json
-          }
+            cleanups.push(onValue(ref(rtdb, path), snapshot => {
+              if (snapshot.exists()) controller.receive(kind, snapshot.val());
+              else controller.realtimeError(kind);
+            }, () => controller.realtimeError(kind)));
+          } catch { controller.realtimeError(kind); }
         }
-
-        if (!res.ok) {
-          throw new Error(data?.error || `Failed to connect to room (HTTP ${res.status})`);
-        }
-
-        if (!isMounted || !data) return;
-
-        if (typeof data.seat === 'number') setMySeat(data.seat as 0 | 1);
-        if (typeof data.isHost === 'boolean') setIsHost(data.isHost);
-        if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
-        if (data.private) setPrivateState(normalizePrivateState(data.private));
-
-        setIsLoading(false);
-      } catch (err: unknown) {
-        if (!isMounted) return;
-        const msg = err instanceof Error ? err.message : 'Connection failed';
-        setErrorMsg(msg);
-        setIsLoading(false);
-      }
+        try { cleanups.push(onValue(ref(rtdb, '.info/connected'), snapshot => controller.setConnected(snapshot.val() === true))); }
+        catch { controller.setConnected(false); }
+        const online = () => controller.setOnline(true);
+        const offline = () => controller.setOnline(false);
+        const focus = () => { if (document.visibilityState === 'visible') void controller.refreshFresh(); };
+        const storedNotes = (event: StorageEvent) => {
+          if (event.key === notesController.key || event.key === null) { notesController.reload(); void controller.refreshFresh(); }
+        };
+        window.addEventListener('online', online); window.addEventListener('offline', offline);
+        window.addEventListener('focus', focus); document.addEventListener('visibilitychange', focus);
+        window.addEventListener('storage', storedNotes);
+        cleanups.push(() => {
+          window.removeEventListener('online', online); window.removeEventListener('offline', offline);
+          window.removeEventListener('focus', focus); document.removeEventListener('visibilitychange', focus);
+          window.removeEventListener('storage', storedNotes);
+        });
+        await controller.start();
+      } catch {
+        if (active) setSessionState({ ...INITIAL_SESSION, loading: false, connectionError: 'ยืนยันบัญชีผู้เล่นไม่สำเร็จ กรุณาลองเชื่อมต่อใหม่' });
+      } finally { clearTimeout(timeout); }
     }
-
-    initSession();
-
+    void initialize();
     return () => {
-      isMounted = false;
+      active = false; clearTimeout(timeout);
+      session?.dispose(); cleanups.forEach(cleanup => cleanup());
+      presence?.dispose();
+      if (presenceRef.current === presence) presenceRef.current = null;
+      if (sessionRef.current === session) sessionRef.current = null;
     };
-  }, [roomCode]);
+  }, [roomCode, bootstrapAttempt]);
 
-  // 2. Realtime listener on Firebase RTDB (when configured) with polling fallback
   useEffect(() => {
-    if (!currentUserUid) return;
+    if (sessionState.left) { presenceRef.current?.dispose(); router.replace('/'); }
+  }, [sessionState.left, router]);
 
-    let publicRef: ReturnType<typeof ref> | null = null;
-    let privateRef: ReturnType<typeof ref> | null = null;
-
-    try {
-      publicRef = ref(rtdb, `rooms/${roomCode}/public`);
-      privateRef = ref(rtdb, `rooms/${roomCode}/private/${currentUserUid}`);
-
-      onValue(
-        publicRef,
-        (snap) => {
-          if (snap.exists()) {
-            setPublicState(normalizePublicState(snap.val(), roomCode));
-          }
-        },
-        (error) => {
-          // RTDB listen error, silently fallback to polling interval
-          console.warn('RTDB public sync error:', error.message);
-        }
-      );
-
-      onValue(
-        privateRef,
-        (snap) => {
-          if (snap.exists()) {
-            setPrivateState(normalizePrivateState(snap.val()));
-          }
-        },
-        (error) => {
-          // RTDB listen error, silently fallback to polling interval
-          console.warn('RTDB private sync error:', error.message);
-        }
-      );
-    } catch {
-      // If client cannot connect to RTDB directly, use polling interval
-    }
-
-    // Polling interval fallback for seamless sync across all network conditions
-    const pollInterval = setInterval(async () => {
-      if (!tokenRef.current) return;
-      try {
-        const res = await fetch(`/api/room/${roomCode}`, {
-          headers: { Authorization: `Bearer ${tokenRef.current}` },
-        });
-        if (res.ok) {
-          const rawText = await res.text();
-          if (rawText) {
-            try {
-              const data = JSON.parse(rawText);
-              if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
-              if (data.private) setPrivateState(normalizePrivateState(data.private));
-              if (typeof data.seat === 'number') setMySeat(data.seat);
-              if (typeof data.isHost === 'boolean') setIsHost(data.isHost);
-            } catch {
-              // Ignore parse error
-            }
-          }
-        }
-      } catch {
-        // Ignore background polling glitches
-      }
-    }, 1000);
-
-    return () => {
-      clearInterval(pollInterval);
-      if (publicRef) off(publicRef);
-      if (privateRef) off(privateRef);
-    };
-  }, [roomCode, currentUserUid]);
-
-  // 3. API Dispatchers
-  const callApi = useCallback(
-    async (endpoint: string, body: Record<string, unknown>) => {
-      const token = tokenRef.current;
-      if (!token) throw new Error('Not authenticated');
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        const rawText = await res.text();
-        let errorMsg = `Server error (${res.status})`;
-        if (rawText) {
-          try {
-            const data = JSON.parse(rawText);
-            if (data?.error) errorMsg = data.error;
-          } catch {
-            if (rawText.length < 150) errorMsg = rawText;
-          }
-        }
-        throw new Error(errorMsg);
-      }
-
-      // Immediately poll for updated state
-      try {
-        const syncRes = await fetch(`/api/room/${roomCode}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (syncRes.ok) {
-          const syncText = await syncRes.text();
-          if (syncText) {
-            try {
-              const syncData = JSON.parse(syncText);
-              if (syncData.public) setPublicState(normalizePublicState(syncData.public, roomCode));
-              if (syncData.private) setPrivateState(normalizePrivateState(syncData.private));
-            } catch {
-              // Ignore
-            }
-          }
-        }
-      } catch {
-        // Ignore
-      }
-    },
-    [roomCode]
+  const send = async (action: ClientCommand) => { await sessionRef.current?.submit(action); };
+  const refresh = async () => {
+    if (sessionRef.current) await sessionRef.current.refreshFresh();
+    else { setSessionState(INITIAL_SESSION); setBootstrapAttempt(attempt => attempt + 1); }
+  };
+  const leave = () => { void sessionRef.current?.leave(); };
+  const snapshot = sessionState.snapshot;
+  if (sessionState.loading || (snapshot && snapshot.public.code !== roomCode)) return (
+    <div className="game-loading-screen" role="status">
+      <div className="spinner-dots" aria-hidden="true"><span /><span /><span /></div>
+      <p className="loading-text">กำลังเชื่อมต่อแฟ้มสืบสวน {roomCode}...</p>
+    </div>
   );
-
-  const handleToggleReady = async (ready: boolean) => {
-    await callApi('/api/room/ready', { code: roomCode, ready });
-  };
-
-  const handleStartMatch = async () => {
-    await callApi('/api/room/start', { code: roomCode });
-  };
-
-  const handleAcknowledgeRole = async () => {
-    const actionId = `role-ack-${publicState.roundIndex}-${Date.now()}`;
-    await callApi('/api/game/action', {
-      code: roomCode,
-      actionId,
-      action: { type: 'ROLE_ACK' },
-    });
-    setAckedRound(publicState.roundIndex);
-  };
-
-  const handleSubmitAnswer = async (optionId: string) => {
-    const actionId = `answer-${publicState.roundIndex}-${publicState.clueIndex}-${Date.now()}`;
-    await callApi('/api/game/action', {
-      code: roomCode,
-      actionId,
-      action: {
-        type: 'SUBMIT_ANSWER',
-        clueIndex: publicState.clueIndex,
-        optionId,
-      },
-    });
-  };
-
-  const handleAcknowledgeReveal = async () => {
-    const actionId = `reveal-ack-${publicState.roundIndex}-${publicState.clueIndex}-${Date.now()}`;
-    await callApi('/api/game/action', {
-      code: roomCode,
-      actionId,
-      action: {
-        type: 'REVEAL_ACK',
-        clueIndex: publicState.clueIndex,
-      },
-    });
-  };
-
-  const handleSubmitDecision = async (decision: DecisionAction) => {
-    const actionId = `decision-${publicState.roundIndex}-${publicState.clueIndex}-${Date.now()}`;
-    await callApi('/api/game/action', {
-      code: roomCode,
-      actionId,
-      action: {
-        type: 'SUBMIT_DECISION',
-        clueIndex: publicState.clueIndex,
-        decision,
-      },
-    });
-  };
-
-  const handleNextRoundReady = async () => {
-    const actionId = `next-ready-${publicState.roundIndex}-${Date.now()}`;
-    await callApi('/api/game/action', {
-      code: roomCode,
-      actionId,
-      action: { type: 'NEXT_ROUND_READY' },
-    });
-  };
-
-  const handleRequestRematch = async () => {
-    const actionId = `rematch-${Date.now()}`;
-    await callApi('/api/game/action', {
-      code: roomCode,
-      actionId,
-      action: { type: 'REMATCH_REQUEST' },
-    });
-  };
-
-  const handleLeaveRoom = () => {
-    router.push('/');
-  };
-
-  // Loading Screen
-  if (isLoading) {
-    return (
-      <div className="game-loading-screen">
-        <div className="spinner-dots"><span /><span /><span /></div>
-        <p className="loading-text">กำลังเชื่อมต่อแฟ้มสืบสวน {roomCode}...</p>
-      </div>
-    );
-  }
-
-  // Error Screen
-  if (errorMsg) {
-    return (
-      <div className="game-error-screen">
-        <div className="error-box">
-          <h2 className="error-title">เกิดข้อผิดพลาดในการเชื่อมต่อ</h2>
-          <p className="error-message">{errorMsg}</p>
-          <button className="btn btn-primary" onClick={() => router.push('/')}>
-            กลับสู่หน้าหลัก
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Opponent Answered indicator for current clue
-  const oppHasAnswered = Boolean(
-    (publicState.revealedAnswers ?? []).find((r) => r.clueIndex === publicState.clueIndex) ||
-    publicState.phase === 'ANSWER_REVEAL'
+  if (!snapshot) return (
+    <div className="game-error-screen"><div className="error-box" role="alert">
+      <h2 className="error-title">ยังเชื่อมต่อห้องไม่ได้</h2>
+      <p className="error-message">{sessionState.connectionError || 'กำลังตรวจสถานะห้อง'}</p>
+      <button className="btn btn-primary" onClick={() => void refresh()}>ลองเชื่อมต่อใหม่</button>
+      {sessionState.pending?.envelope.action.type === 'PLAYER_LEAVE' && <button className="btn btn-primary" disabled={sessionState.sending}
+        onClick={() => void sessionRef.current?.retry()}>ลองคำขอออกจากห้องเดิม</button>}
+      <button className="btn btn-secondary" onClick={() => router.push('/')}>กลับสู่หน้าหลัก</button>
+    </div></div>
   );
-
+  const { public: pub, private: own, seat, isHost } = snapshot;
+  const blocked = sessionState.actionBlocked || (pub.phase === 'MATCH_RESULT' && pub.players.some(player => player === null));
+  const viewKey = `${pub.matchId}:${pub.roundId}:${pub.phase}:${pub.clueIndex}`;
   return (
     <div className="game-screen-wrapper">
-      {/* Top Header */}
-      <GameHeader
-        roomCode={roomCode}
-        phase={publicState.phase}
-        roundIndex={publicState.roundIndex}
-        clueIndex={publicState.clueIndex}
-        mySeat={mySeat}
-        scores={publicState.matchScores}
-        onOpenRules={() => setIsRulesOpen(true)}
-        onLeaveRoom={handleLeaveRoom}
-      />
-
-      {/* Main Game Screen depending on State Machine Phase */}
-      <main className="game-main-content">
-        {publicState.phase === 'LOBBY' && (
-          <LobbyView
-            roomCode={roomCode}
-            players={publicState.players}
-            mySeat={mySeat}
-            isHost={isHost}
-            onToggleReady={handleToggleReady}
-            onStartMatch={handleStartMatch}
-            onOpenRules={() => setIsRulesOpen(true)}
-          />
-        )}
-
-        {publicState.phase === 'ROLE_INTRO' && (
-          <RoleIntroView
-            myRole={privateState.role}
-            roundIndex={publicState.roundIndex}
-            hasAcknowledged={roleAcked}
-            onAcknowledgeRole={handleAcknowledgeRole}
-          />
-        )}
-
-        {publicState.phase === 'ANSWERING' && (
-          <AnsweringView
-            scenario={publicState.scenario}
-            clueIndex={publicState.clueIndex}
-            myCommittedAnswer={privateState.committedAnswer}
-            opponentHasAnswered={oppHasAnswered}
-            onSubmitAnswer={handleSubmitAnswer}
-          />
-        )}
-
-        {publicState.phase === 'ANSWER_REVEAL' && (
-          <AnswerRevealView
-            scenario={publicState.scenario}
-            clueIndex={publicState.clueIndex}
-            mySeat={mySeat}
-            players={publicState.players}
-            revealedAnswers={publicState.revealedAnswers}
-            onAcknowledgeReveal={handleAcknowledgeReveal}
-          />
-        )}
-
-        {publicState.phase === 'DECIDING' && (
-          <DecidingView
-            clueIndex={publicState.clueIndex}
-            myRole={privateState.role}
-            hasGuessed={privateState.hasGuessed}
-            myGuessedRole={privateState.guess}
-            myGuessedClueIndex={privateState.guessClueIndex}
-            onSubmitDecision={handleSubmitDecision}
-          />
-        )}
-
-        {publicState.phase === 'ROUND_REVEAL' && (
-          <RoundRevealView
-            roundSummary={publicState.roundSummary}
-            roundIndex={publicState.roundIndex}
-            mySeat={mySeat}
-            players={publicState.players}
-            matchScores={publicState.matchScores}
-            onNextRoundReady={handleNextRoundReady}
-          />
-        )}
-
-        {publicState.phase === 'MATCH_RESULT' && (
-          <MatchResultView
-            players={publicState.players}
-            mySeat={mySeat}
-            matchScores={publicState.matchScores}
-            roundHistory={[]}
-            rematchRequests={publicState.rematchRequests}
-            onRequestRematch={handleRequestRematch}
-            onBackToHome={handleLeaveRoom}
-          />
-        )}
+      <GameHeader roomCode={roomCode} phase={pub.phase} roundIndex={pub.roundIndex} clueIndex={pub.clueIndex}
+        mySeat={seat} scores={pub.matchScores} leaveBlocked={sessionState.sending || sessionState.left}
+        onOpenRules={() => setIsRulesOpen(true)} onLeaveRoom={leave} />
+      <div className="room-sync-status" role="status" aria-live="polite">
+        {sessionState.sending ? 'กำลังบันทึกและยืนยันคำขอ...'
+          : sessionState.connectionError ? 'กำลังรอเชื่อมต่อและตรวจสถานะอีกครั้ง...'
+          : sessionState.synchronizing ? 'กำลังซิงก์สถานะห้อง กรุณารอสักครู่...'
+          : sessionState.realtime ? 'เชื่อมต่อห้องแล้ว' : 'อัปเดตสถานะผ่าน server'}
+      </div>
+      <RoomConnectionStatus presence={presenceState} snapshot={snapshot} />
+      {(sessionState.connectionError || sessionState.actionError || (sessionState.pending && !sessionState.sending)) && (
+        <div className="room-recovery-banner" role="alert">
+          {sessionState.connectionError && <p>{sessionState.connectionError}</p>}
+          {sessionState.actionError && <p>{sessionState.actionError.message}</p>}
+          {sessionState.pending && !sessionState.actionError && <p>ยังรอยืนยันคำขอเดิม กรุณาตรวจสถานะก่อนส่งคำขอใหม่</p>}
+          <div className="room-recovery-actions">
+            <button className="btn btn-secondary" disabled={sessionState.sending} onClick={() => void refresh()}>ตรวจสถานะล่าสุด</button>
+            {sessionState.pending && <button className="btn btn-primary" disabled={sessionState.sending}
+              onClick={() => void sessionRef.current?.retry()}>ตรวจและลองคำขอเดิมอีกครั้ง</button>}
+          </div>
+        </div>
+      )}
+      <main className="game-main-content" key={viewKey}>
+        {pub.phase === 'ABANDONED' && <AbandonedView displayName={pub.termination?.displayName ?? 'คู่เล่น'}
+          busy={sessionState.sending} onLeave={leave} />}
+        {pub.phase === 'LOBBY' && <LobbyView roomCode={roomCode} players={pub.players} mySeat={seat} isHost={isHost}
+          actionBlocked={blocked} onToggleReady={ready => send({ type: 'PLAYER_READY', ready })}
+          onStartMatch={() => send({ type: 'START_MATCH' })} onOpenRules={() => setIsRulesOpen(true)} />}
+        {pub.phase === 'ROLE_INTRO' && <RoleIntroView myRole={own.role} roundIndex={pub.roundIndex}
+          actionBlocked={blocked} hasAcknowledged={own.roleAcknowledged} onAcknowledgeRole={() => send({ type: 'ROLE_ACK' })} />}
+        {pub.phase === 'ANSWERING' && <AnsweringView scenario={pub.scenario} clueIndex={pub.clueIndex}
+          actionBlocked={blocked} myCommittedAnswer={own.committedAnswer} opponentHasAnswered={false}
+          onSubmitAnswer={optionId => send({ type: 'SUBMIT_ANSWER', optionId })} />}
+        {pub.phase === 'ANSWER_REVEAL' && <AnswerRevealView scenario={pub.scenario} clueIndex={pub.clueIndex}
+          actionBlocked={blocked} hasAcknowledged={own.revealAcknowledged} mySeat={seat} players={pub.players}
+          revealedAnswers={pub.revealedAnswers} evidence={pub.revealedEvidence} onAcknowledgeReveal={() => send({ type: 'REVEAL_ACK' })} />}
+        {pub.phase === 'DECIDING' && <DecidingView clueIndex={pub.clueIndex} myRole={own.role}
+          actionBlocked={blocked} hasSubmitted={own.decisionSubmitted} hasGuessed={own.hasGuessed}
+          myGuessedRole={own.guess} myGuessedClueIndex={own.guessClueIndex}
+          scratchpad={notes} onToggleNote={(role, tag) => notesRef.current?.toggle(role, tag)}
+          onSubmitDecision={decision => send({ type: 'SUBMIT_DECISION', decision })} />}
+        {pub.phase === 'ROUND_REVEAL' && <RoundRevealView roundSummary={pub.roundSummary} roundIndex={pub.roundIndex}
+          actionBlocked={blocked} hasAcknowledged={own.nextRoundReady} mySeat={seat} players={pub.players}
+          matchScores={pub.matchScores} onNextRoundReady={() => send({ type: 'NEXT_ROUND_READY' })} />}
+        {pub.phase === 'MATCH_RESULT' && <MatchResultView players={pub.players} mySeat={seat} matchScores={pub.matchScores}
+          actionBlocked={blocked} leaveBlocked={sessionState.sending} roundHistory={pub.roundHistory} rematchRequests={pub.rematchRequests}
+          onRequestRematch={() => send({ type: 'REMATCH_REQUEST' })} onBackToHome={leave} />}
       </main>
-
-      {/* Rules Modal Drawer */}
       <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
     </div>
   );

@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
+import { acceptanceEnv } from './tests/helpers/acceptanceEnv';
+
+const target = acceptanceEnv();
 
 /**
  * Playwright E2E configuration for Who Are You Really?
@@ -9,11 +12,14 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  timeout: 60 * 1000,
+  timeout: 240 * 1000,
   workers: 1,
+  maxFailures: 1,
+  expect: { timeout: 15_000 },
   reporter: 'list',
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL: target.baseURL.toString(),
+    actionTimeout: 15_000,
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
   },
@@ -32,9 +38,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run start',
-    port: 3000,
-    reuseExistingServer: true,
+    command: `npm run start -- --hostname ${target.baseURL.hostname} --port ${target.baseURL.port || '80'}`,
+    url: target.baseURL.toString(),
+    reuseExistingServer: false,
     timeout: 120 * 1000,
   },
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   generateRoomCode,
   createRoom,
@@ -7,12 +7,21 @@ import {
   startMatch,
   dispatchGameAction,
   memoryRooms,
-} from '../../lib/server/roomService';
+} from '../helpers/testClient';
+import * as roomStore from '../../lib/server/roomStore';
+import { decodeRoomRecord } from '../../lib/server/roomSchema';
+import { fakeRTDB } from '../helpers/fakeRTDB';
 
 describe('Room Service (lib/server/roomService.ts)', () => {
   beforeEach(() => {
     memoryRooms.clear();
+    const database = fakeRTDB();
+    database.onPut((path, value) => {
+      if (path.startsWith('rooms/')) memoryRooms.set(path.slice(6), decodeRoomRecord(value, path.slice(6))!);
+    });
+    vi.spyOn(roomStore, 'getRoomStore').mockImplementation(() => database.store());
   });
+  afterEach(() => vi.restoreAllMocks());
 
   describe('Room Code Generation', () => {
     it('generates 6-character room codes without confusing characters (0, O, 1, I, L)', () => {

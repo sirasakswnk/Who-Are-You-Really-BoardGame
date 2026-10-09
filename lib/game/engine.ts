@@ -17,6 +17,7 @@ import {
 } from './types';
 import { generateRolePair, canGuessRole } from './roles';
 import { calculateRoundScores } from './scoring';
+import { revealedEvidence } from './evidence';
 
 /**
  * Creates default fallback scenarios for testing and bootstrapping.
@@ -52,6 +53,7 @@ export function createInitialGameState(roomId: string, matchId = `m-${Date.now()
     roundHistory: [],
     currentRound: null,
     rematchRequests: [false, false],
+    termination: null,
   };
 }
 
@@ -59,6 +61,9 @@ export function createInitialGameState(roomId: string, matchId = `m-${Date.now()
  * Pure Game Engine Reducer
  */
 export function processAction(state: GameState, action: GameAction): EngineResult {
+  if ('seat' in action && (action.seat !== 0 && action.seat !== 1)) {
+    return { success: false, state, error: 'Invalid seat index' };
+  }
   switch (action.type) {
     case 'PLAYER_JOIN': {
       if (state.phase !== 'LOBBY') {
@@ -89,18 +94,23 @@ export function processAction(state: GameState, action: GameAction): EngineResul
     }
 
     case 'PLAYER_LEAVE': {
-      if (state.phase !== 'LOBBY') {
-        return { success: false, state, error: 'Cannot leave seat via lobby action during match' };
-      }
       const { seat } = action;
-      if (seat !== 0 && seat !== 1) {
-        return { success: false, state, error: 'Invalid seat index' };
-      }
+      const leaving = state.seats[seat];
+      if (!leaving) return { success: false, state, error: 'Seat is not occupied' };
       const newSeats: GameState['seats'] = [...state.seats];
       newSeats[seat] = null;
+      const remaining = newSeats.findIndex(player => player !== null);
+      if (state.phase === 'LOBBY' && remaining >= 0) {
+        newSeats[remaining] = { ...newSeats[remaining]!, isHost: true, ready: false };
+      }
       return {
         success: true,
-        state: { ...state, seats: newSeats },
+        state: {
+          ...state, seats: newSeats,
+          phase: remaining < 0 ? 'CLOSED' : state.phase === 'LOBBY' || state.phase === 'MATCH_RESULT' ? state.phase : 'ABANDONED',
+          rematchRequests: [false, false],
+          termination: state.phase === 'LOBBY' || state.phase === 'MATCH_RESULT' ? null : state.termination ?? { seat, displayName: leaving.displayName },
+        },
       };
     }
 
@@ -207,6 +217,9 @@ export function processAction(state: GameState, action: GameAction): EngineResul
       if (state.currentRound.currentAnswers[seat] !== null) {
         return { success: false, state, error: 'Answer already submitted and locked for this clue' };
       }
+      if (!state.currentRound.scenarios[clueIndex]?.options.some(option => option.id === optionId)) {
+        return { success: false, state, error: 'Invalid option for this scenario' };
+      }
 
       const answers: [string | null, string | null] = [...state.currentRound.currentAnswers];
       answers[seat] = optionId;
@@ -278,6 +291,9 @@ export function processAction(state: GameState, action: GameAction): EngineResul
         return { success: false, state, error: 'Not in DECIDING phase' };
       }
       const { seat, clueIndex, decision } = action;
+      if (!decision || !['continue', 'guess', 'ack'].includes(decision.type)) {
+        return { success: false, state, error: 'Invalid decision type' };
+      }
       if (clueIndex !== state.clueIndex) {
         return { success: false, state, error: `Stale clue index in decision: expected ${state.clueIndex}` };
       }
@@ -362,6 +378,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
           guessClueIndex: updatedRound.guessClueIndex,
           scores: roundCalc.scores,
           reason: roundCalc.reasons,
+          evidence: revealedEvidence(updatedRound),
         };
 
         updatedRound = {
@@ -430,6 +447,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
             ...state,
             phase: 'MATCH_RESULT',
             rematchRequests: [false, false],
+            termination: null,
           },
         };
       }
@@ -467,6 +485,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
     }
 
     case 'REMATCH_REQUEST': {
+      if (!state.seats[0] || !state.seats[1]) return { success: false, state, error: 'คู่เล่นออกจากห้องแล้ว กรุณาสร้างห้องใหม่' };
       if (state.phase !== 'MATCH_RESULT') {
         return { success: false, state, error: 'Rematch can only be requested in MATCH_RESULT phase' };
       }
@@ -476,6 +495,9 @@ export function processAction(state: GameState, action: GameAction): EngineResul
 
       const bothRequested = rematches[0] && rematches[1];
       if (bothRequested) {
+        if (!action.nextMatchId || action.nextMatchId === state.matchId) {
+          return { success: false, state, error: 'Rematch requires a new match identity' };
+        }
         // Reset back to LOBBY
         const resetSeats: GameState['seats'] = [
           state.seats[0] ? { ...state.seats[0], ready: false } : null,
@@ -486,6 +508,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
           state: {
             ...state,
             phase: 'LOBBY',
+            matchId: action.nextMatchId,
             roundIndex: 0,
             clueIndex: 0,
             matchScores: [0, 0],
@@ -493,6 +516,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
             currentRound: null,
             seats: resetSeats,
             rematchRequests: [false, false],
+            termination: null,
           },
         };
       }

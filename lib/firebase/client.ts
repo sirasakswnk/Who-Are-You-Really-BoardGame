@@ -53,13 +53,14 @@ if (
  * Ensures user is authenticated anonymously with persistent session.
  * Uses auth.authStateReady() to ensure stored session is restored before creating a new one.
  */
-export async function ensureAnonymousAuth(): Promise<User> {
-  if (typeof auth.authStateReady === 'function') {
-    await auth.authStateReady();
-  }
-  if (auth.currentUser) {
-    return auth.currentUser;
-  }
-  const cred = await signInAnonymously(auth);
-  return cred.user;
+let anonymousAuthRequest: Promise<User> | null = null;
+export function ensureAnonymousAuth(): Promise<User> {
+  // Strict Mode, two home actions, or multiple mounted callers share restoration.
+  if (anonymousAuthRequest) return anonymousAuthRequest;
+  anonymousAuthRequest = (async () => {
+    if (typeof auth.authStateReady === 'function') await auth.authStateReady();
+    if (auth.currentUser) return auth.currentUser;
+    return (await signInAnonymously(auth)).user;
+  })().finally(() => { anonymousAuthRequest = null; });
+  return anonymousAuthRequest;
 }

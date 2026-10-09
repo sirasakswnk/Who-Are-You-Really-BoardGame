@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { RoleId, ROLES } from '@/lib/game/types';
 
 interface RoleIntroViewProps {
+  actionBlocked?: boolean;
   myRole: RoleId | null;
   roundIndex: number;
   hasAcknowledged: boolean;
@@ -11,6 +12,7 @@ interface RoleIntroViewProps {
 }
 
 export default function RoleIntroView({
+  actionBlocked = false,
   myRole,
   roundIndex,
   hasAcknowledged,
@@ -22,6 +24,7 @@ export default function RoleIntroView({
   const roleInfo = myRole ? ROLES[myRole] : null;
 
   const handleAcknowledge = async () => {
+    if (actionBlocked || isSubmitting || hasAcknowledged) return;
     setIsSubmitting(true);
     try {
       await onAcknowledgeRole();
@@ -103,7 +106,7 @@ export default function RoleIntroView({
           <button
             className="btn btn-primary btn-lg acknowledge-role-btn"
             onClick={handleAcknowledge}
-            disabled={!myRole || isSubmitting}
+            disabled={!myRole || isSubmitting || actionBlocked}
           >
             {isSubmitting ? 'กำลังบันทึก...' : 'เข้าใจบทบาทแล้ว พร้อมตอบคำถาม! ➔'}
           </button>

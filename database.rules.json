@@ -7,16 +7,16 @@
         ".read": false,
         ".write": false,
         "members": {
-          ".read": "auth != null && data.child(auth.uid).exists()",
+          ".read": "auth != null && data.child(auth.uid).exists() && root.child('rooms').child($code).child('server').child('expiresAt').val() > now",
           ".write": false
         },
         "public": {
-          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists() && root.child('rooms').child($code).child('server').child('expiresAt').val() > now",
           ".write": false
         },
         "private": {
           "$uid": {
-            ".read": "auth != null && auth.uid === $uid",
+            ".read": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('members').child(auth.uid).exists() && root.child('rooms').child($code).child('server').child('expiresAt').val() > now",
             ".write": false
           }
         },
@@ -28,10 +28,11 @@
     },
     "presence": {
       "$code": {
+        ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists() && root.child('rooms').child($code).child('server').child('expiresAt').val() > now",
         "$uid": {
           "$connId": {
-            ".read": "auth != null",
-            ".write": "auth != null && auth.uid === $uid"
+            ".write": "auth != null && auth.uid === $uid && (!newData.exists() || (root.child('rooms').child($code).child('members').child(auth.uid).exists() && root.child('rooms').child($code).child('server').child('expiresAt').val() > now && root.child('rooms').child($code).child('public').child('phase').val() !== 'CLOSED'))",
+            ".validate": "newData.val() === true && $connId.matches(/^[a-zA-Z0-9_-]{1,64}$/)"
           }
         }
       }

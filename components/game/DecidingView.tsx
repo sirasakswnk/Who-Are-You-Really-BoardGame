@@ -2,71 +2,70 @@
 
 import { useState } from 'react';
 import { RoleId, ROLES, ROLE_IDS, CLUES_PER_ROUND, SCORE_TABLE, DecisionAction } from '@/lib/game/types';
+import type { NoteTag, SuspicionNotes } from '@/lib/client/roundNotes';
 
 interface DecidingViewProps {
+  hasSubmitted?: boolean;
+  actionBlocked?: boolean;
   clueIndex: number;
   myRole: RoleId | null;
   hasGuessed: boolean;
   myGuessedRole: RoleId | null;
   myGuessedClueIndex: number | null;
   onSubmitDecision: (decision: DecisionAction) => Promise<void>;
+  scratchpad?: SuspicionNotes;
+  onToggleNote?: (role: RoleId, tag: NoteTag) => void;
 }
 
 export default function DecidingView({
+  actionBlocked = false,
+  hasSubmitted = false,
   clueIndex,
   myRole,
   hasGuessed,
   myGuessedRole,
   myGuessedClueIndex,
   onSubmitDecision,
+  scratchpad = {},
+  onToggleNote,
 }: DecidingViewProps) {
   const [selectedRole, setSelectedRole] = useState<RoleId | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Local scratchpad suspicion state: Record<RoleId, 'suspect' | 'cleared' | 'none'>
-  const [scratchpad, setScratchpad] = useState<Record<string, 'suspect' | 'cleared' | 'none'>>({});
 
   const isFinalClue = clueIndex === CLUES_PER_ROUND - 1; // Clue 4 (index 3)
   const currentPoints = SCORE_TABLE[clueIndex] ?? 2;
 
   const toggleScratchpad = (roleId: RoleId, tag: 'suspect' | 'cleared') => {
-    setScratchpad((prev) => ({
-      ...prev,
-      [roleId]: prev[roleId] === tag ? 'none' : tag,
-    }));
+    onToggleNote?.(roleId, tag);
   };
 
   const handleContinue = async () => {
-    if (isFinalClue || hasGuessed || isSubmitting) return;
+    if (isFinalClue || hasGuessed || isSubmitting || hasSubmitted || actionBlocked) return;
     setIsSubmitting(true);
     try {
       await onSubmitDecision({ type: 'continue' });
-      setHasSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleConfirmGuess = async () => {
-    if (!selectedRole || isSubmitting) return;
+    if (!selectedRole || isSubmitting || hasSubmitted || actionBlocked) return;
     setIsSubmitting(true);
+    setShowConfirmModal(false);
     try {
       await onSubmitDecision({ type: 'guess', roleId: selectedRole });
-      setShowConfirmModal(false);
-      setHasSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleAckAlreadyGuessed = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || hasSubmitted || actionBlocked) return;
     setIsSubmitting(true);
     try {
       await onSubmitDecision({ type: 'ack' });
-      setHasSubmitted(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -139,10 +138,16 @@ export default function DecidingView({
                 <div
                   key={roleId}
                   className={`suspect-card ${isSelected ? 'selected' : ''} note-${note}`}
-                  onClick={() => setSelectedRole(roleId)}
+                  onClick={() => !hasSubmitted && !actionBlocked && !isSubmitting && setSelectedRole(roleId)}
                   role="radio"
                   aria-checked={isSelected}
-                  tabIndex={0}
+                  aria-disabled={hasSubmitted || actionBlocked || isSubmitting}
+                  tabIndex={hasSubmitted || actionBlocked || isSubmitting ? -1 : 0}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    if (!hasSubmitted && !actionBlocked && !isSubmitting) setSelectedRole(roleId);
+                  }}
                 >
                   <div className="suspect-card-header">
                     <span className={`suspect-name role-${roleId}`}>{info.name}</span>
@@ -151,6 +156,7 @@ export default function DecidingView({
                         className={`tag-btn suspect ${note === 'suspect' ? 'active' : ''}`}
                         onClick={() => toggleScratchpad(roleId, 'suspect')}
                         title="ทำเครื่องหมายว่าน่าสงสัย"
+                        aria-pressed={note === 'suspect'}
                       >
                         ? สงสัย
                       </button>
@@ -158,6 +164,7 @@ export default function DecidingView({
                         className={`tag-btn clear ${note === 'cleared' ? 'active' : ''}`}
                         onClick={() => toggleScratchpad(roleId, 'cleared')}
                         title="ทำเครื่องหมายว่าตัดออก"
+                        aria-pressed={note === 'cleared'}
                       >
                         ✕ ตัด
                       </button>
@@ -183,7 +190,7 @@ export default function DecidingView({
           <button
             className="btn btn-primary btn-lg proceed-btn"
             onClick={handleAckAlreadyGuessed}
-            disabled={isSubmitting}
+            disabled={isSubmitting || actionBlocked}
           >
             พร้อมไปต่อ ➔
           </button>
@@ -193,7 +200,7 @@ export default function DecidingView({
               <button
                 className="btn btn-secondary btn-lg continue-clue-btn"
                 onClick={handleContinue}
-                disabled={isSubmitting}
+                disabled={isSubmitting || actionBlocked}
               >
                 ดูสถานการณ์ต่อไป (ข้อ {clueIndex + 2})
               </button>
@@ -201,7 +208,7 @@ export default function DecidingView({
             <button
               className="btn btn-primary btn-lg lock-guess-btn"
               onClick={() => setShowConfirmModal(true)}
-              disabled={!selectedRole || isSubmitting}
+              disabled={!selectedRole || isSubmitting || actionBlocked}
             >
               ล็อกคำทาย! 🔒 (+{currentPoints} แต้ม)
             </button>
@@ -224,7 +231,7 @@ export default function DecidingView({
               <button className="btn btn-secondary" onClick={() => setShowConfirmModal(false)}>
                 เปลี่ยนใจเลือกใหม่
               </button>
-              <button className="btn btn-primary" onClick={handleConfirmGuess} disabled={isSubmitting}>
+              <button className="btn btn-primary" onClick={handleConfirmGuess} disabled={isSubmitting || actionBlocked}>
                 {isSubmitting ? 'กำลังส่งคำทาย...' : 'ยืนยันล็อกคำทาย!'}
               </button>
             </div>

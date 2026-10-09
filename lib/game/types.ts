@@ -60,7 +60,9 @@ export type GamePhase =
   | 'ANSWER_REVEAL'
   | 'DECIDING'
   | 'ROUND_REVEAL'
-  | 'MATCH_RESULT';
+  | 'MATCH_RESULT'
+  | 'ABANDONED'
+  | 'CLOSED';
 
 /** Scoring: points for guessing correctly at each clue index (clues 0, 1, 2, 3) */
 export const SCORE_TABLE: readonly number[] = [5, 4, 3, 2] as const;
@@ -115,6 +117,14 @@ export type DecisionAction =
   | { type: 'ack' }; // for players who already guessed in an earlier clue
 
 /** Round result saved in history */
+export interface RevealedEvidence {
+  clueIndex: number;
+  scenarioId: string;
+  scenarioVersion: number;
+  prompt: string;
+  answers: [string, string]; // Revealed labels captured from the round's content snapshot.
+}
+
 export interface RoundResult {
   roundIndex: number;
   roles: [RoleId, RoleId];                         // [seat0, seat1]
@@ -122,6 +132,7 @@ export interface RoundResult {
   guessClueIndex: [number | null, number | null];  // clue index where each guessed
   scores: [number, number];                        // points earned in this round [seat0, seat1]
   reason: [string, string];                        // explanation in Thai
+  evidence?: RevealedEvidence[];                   // Missing only for pre-F06 history.
 }
 
 /** Active round state */
@@ -152,9 +163,10 @@ export interface GameState {
   roundHistory: RoundResult[];
   currentRound: RoundState | null;
   rematchRequests: [boolean, boolean];
+  termination?: { seat: 0 | 1; displayName: string } | null;
 }
 
-/** Actions that can be dispatched to the game engine */
+/** Trusted engine commands. Never deserialize a client request as this type. */
 export type GameAction =
   | { type: 'PLAYER_JOIN'; seat: 0 | 1; uid: string; displayName: string; avatarId: string; isHost?: boolean }
   | { type: 'PLAYER_LEAVE'; seat: 0 | 1 }
@@ -165,7 +177,7 @@ export type GameAction =
   | { type: 'REVEAL_ACK'; seat: 0 | 1; clueIndex: number }
   | { type: 'SUBMIT_DECISION'; seat: 0 | 1; clueIndex: number; decision: DecisionAction }
   | { type: 'NEXT_ROUND_READY'; seat: 0 | 1; nextRolePair?: [RoleId, RoleId]; nextScenarios?: Scenario[] }
-  | { type: 'REMATCH_REQUEST'; seat: 0 | 1 };
+  | { type: 'REMATCH_REQUEST'; seat: 0 | 1; nextMatchId?: string };
 
 /** Sanitized player projection (what a specific player's client receives) */
 export interface PlayerProjection {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   createRoom,
   joinRoom,
@@ -7,13 +7,24 @@ import {
   dispatchGameAction,
   getRoomProjections,
   memoryRooms,
-} from '../../lib/server/roomService';
+} from '../helpers/testClient';
 import { RoleId } from '../../lib/game/types';
+import * as roomStore from '../../lib/server/roomStore';
+import { decodeRoomRecord } from '../../lib/server/roomSchema';
+import { fakeRTDB } from '../helpers/fakeRTDB';
 
 describe('Resilience, Concurrency & Data Privacy Boundary (tests/integration/resilience-concurrency.test.ts)', () => {
+  let database: ReturnType<typeof fakeRTDB>;
   beforeEach(() => {
     memoryRooms.clear();
+    database = fakeRTDB();
+    // A test inspection mirror only; the API always reads the simulated server.
+    database.onPut((path, value) => {
+      if (path.startsWith('rooms/')) memoryRooms.set(path.slice(6), decodeRoomRecord(value, path.slice(6))!);
+    });
+    vi.spyOn(roomStore, 'getRoomStore').mockImplementation(() => database.store());
   });
+  afterEach(() => vi.restoreAllMocks());
 
   /* ─────────────────────────────────────────────────────────────
    * 1. Data Privacy & Leakage Audits
@@ -259,7 +270,7 @@ describe('Resilience, Concurrency & Data Privacy Boundary (tests/integration/res
     });
 
     it('rejects action on non-existent room code', async () => {
-      const badRes = await dispatchGameAction('NOT999', 'player-0', 'act-1', {
+      const badRes = await dispatchGameAction('XYZ999', 'player-0', 'act-1', {
         type: 'ROLE_ACK',
         seat: 0,
       });
@@ -274,6 +285,7 @@ describe('Resilience, Concurrency & Data Privacy Boundary (tests/integration/res
 
       // Force room expiration
       room.server.expiresAt = Date.now() - 1000;
+      database.put(`rooms/${code}`, room);
 
       const joinAttempt = await joinRoom(code, 'player-1', 'นักสืบสอง', 'fox');
       expect(joinAttempt.success).toBe(false);

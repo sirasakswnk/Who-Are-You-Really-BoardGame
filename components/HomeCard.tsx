@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ensureAnonymousAuth } from '@/lib/firebase/client';
+import { prepareRoomCreate, clearRoomCreate, type PendingRoomCreate } from '@/lib/client/pendingRoomCreate';
 
 /* ─── constants ─── */
 const AVATARS: [string, string][] = [
@@ -40,9 +41,10 @@ function parseInviteCode(): string {
 
 /* ─── component ─── */
 export default function HomeCard() {
-  const [name, setName] = useState(() => loadSavedProfile().name);
-  const [avatar, setAvatar] = useState<string | null>(() => loadSavedProfile().avatar);
-  const [code, setCode] = useState(() => parseInviteCode());
+  const [name, setName] = useState('');
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [nameMsg, setNameMsg] = useState('');
   const [avMsg, setAvMsg] = useState('');
   const [codeMsg, setCodeMsg] = useState('');
@@ -52,22 +54,41 @@ export default function HomeCard() {
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
-  const inviteCode = useMemo(() => parseInviteCode(), []);
+  const [inviteCode, setInviteCode] = useState('');
   const invited = inviteCode.length === CODE_LEN;
 
   const frameRef = useRef<HTMLDivElement>(null);
   const stampRef = useRef<HTMLDivElement>(null);
   const eyeRefs = useRef<HTMLElement[]>([]);
+  const pendingCreateRef = useRef<PendingRoomCreate | null>(null);
 
   const trimmedName = name.trim();
   const nameOk = charLen(trimmedName) >= 1 && charLen(trimmedName) <= NAME_MAX;
   const stampReady = nameOk && !!avatar;
   const stampState = stampReady ? 'ready' : 'idle';
 
+  /* Restore browser-only data after the server markup has hydrated. */
+  useEffect(() => {
+    // Discard the first mount's restore when Strict Mode runs its cleanup.
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      const saved = loadSavedProfile();
+      const invite = parseInviteCode();
+      setName(saved.name);
+      setAvatar(saved.avatar);
+      setCode(invite);
+      setInviteCode(invite);
+      setProfileLoaded(true);
+    });
+    return () => { active = false; };
+  }, []);
+
   /* ─── persist to localStorage on change ─── */
   useEffect(() => {
+    if (!profileLoaded) return;
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ name: trimmedName, avatar })); } catch { /* ignore */ }
-  }, [trimmedName, avatar]);
+  }, [profileLoaded, trimmedName, avatar]);
 
   /* ─── online / offline ─── */
   const [isOnline, setIsOnline] = useState(true);
@@ -177,17 +198,24 @@ export default function HomeCard() {
       const user = await ensureAnonymousAuth();
       const token = await user.getIdToken();
 
+      let storage: Storage | null = null;
+      try { storage = sessionStorage; } catch { /* Preserve retries in the ref. */ }
+      const pending = prepareRoomCreate(storage, {
+        uid: user.uid, displayName: trimmedName, avatarId: avatar || 'cat',
+      }, pendingCreateRef.current);
+      pendingCreateRef.current = pending;
+
       const res = await fetch('/api/room/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ displayName: trimmedName, avatarId: avatar || 'cat' }),
+        body: JSON.stringify({ requestId: pending.requestId, displayName: pending.displayName, avatarId: pending.avatarId }),
       });
 
       const text = await res.text();
-      let data: { code?: string; error?: string } | null = null;
+      let data: { code?: string; error?: string; retryable?: boolean } | null = null;
       if (text) {
         try {
           data = JSON.parse(text);
@@ -197,6 +225,10 @@ export default function HomeCard() {
       }
 
       if (!res.ok) {
+        if (data?.retryable === false) {
+          clearRoomCreate(storage);
+          pendingCreateRef.current = null;
+        }
         console.error('[CreateRoom] Server responded with error:', res.status, text);
         const errorMsg =
           data?.error ||
@@ -209,6 +241,9 @@ export default function HomeCard() {
       if (!data?.code) {
         throw new Error('ไม่พบรหัสห้องที่สร้าง');
       }
+
+      clearRoomCreate(storage);
+      pendingCreateRef.current = null;
 
       router.push(`/room/${data.code}`);
     } catch (err: unknown) {

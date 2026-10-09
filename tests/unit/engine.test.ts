@@ -263,13 +263,13 @@ describe('Game Engine State Machine', () => {
         type: 'SUBMIT_ANSWER',
         seat: 0,
         clueIndex: 1,
-        optionId: 'opt-x',
+        optionId: 'opt-a',
       }).state;
       state = processAction(state, {
         type: 'SUBMIT_ANSWER',
         seat: 1,
         clueIndex: 1,
-        optionId: 'opt-y',
+        optionId: 'opt-b',
       }).state;
 
       expect(state.phase).toBe('ANSWER_REVEAL');
@@ -433,7 +433,7 @@ describe('Game Engine State Machine', () => {
       // Rematch request from both players resets back to LOBBY
       state = processAction(state, { type: 'REMATCH_REQUEST', seat: 0 }).state;
       expect(state.phase).toBe('MATCH_RESULT');
-      state = processAction(state, { type: 'REMATCH_REQUEST', seat: 1 }).state;
+      state = processAction(state, { type: 'REMATCH_REQUEST', seat: 1, nextMatchId: 'match-rematch' }).state;
       expect(state.phase).toBe('LOBBY');
       expect(state.matchScores).toEqual([0, 0]);
       expect(state.roundHistory).toHaveLength(0);
@@ -455,7 +455,7 @@ describe('Game Engine State Machine', () => {
         type: 'SUBMIT_ANSWER',
         seat: 0,
         clueIndex: 0,
-        optionId: 'opt-secret-a',
+        optionId: 'opt-a',
       }).state;
 
       const proj0 = getPlayerProjection(state, 0);
@@ -463,7 +463,7 @@ describe('Game Engine State Machine', () => {
 
       // P0 projection checks
       expect(proj0.myRole).toBe('saver');
-      expect(proj0.myCommittedAnswer).toBe('opt-secret-a');
+      expect(proj0.myCommittedAnswer).toBe('opt-a');
       expect(proj0.opponentHasAnswered).toBe(false);
 
       // P1 projection checks: must NOT know P0 role or P0 answer!

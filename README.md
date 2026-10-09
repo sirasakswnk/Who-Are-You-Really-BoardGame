@@ -51,7 +51,7 @@
 | **Styling** | Vanilla CSS (`globals.css`) | CSS Variables, Micro-animations, Mobile-first (max 520px container) |
 | **Realtime DB** | Firebase Realtime Database | Live synchronization ระหว่าง 2 ผู้เล่น พร้อม Polling fallback |
 | **Authentication** | Firebase Anonymous Auth | ล็อกอินไม่ระบุตัวตนอัตโนมัติ รักษาสิทธิ์แยกผู้เล่น 2 ฝั่ง |
-| **Testing** | Vitest 3.2.7 + Playwright 1.64 | 70 Unit/Concurrency tests + 8 Multi-Browser E2E tests |
+| **Testing** | Vitest 3.2.7 + Playwright 1.64 | Unit/isolated integration, opt-in emulator และ Multi-Browser E2E; ผลแต่ละขั้นอยู่ใน `docs/F0*.md` |
 | **CI / CD** | GitHub Actions | Automated Lint, Typecheck, Content Validation, Emulators & Build |
 | **Hosting** | Vercel (Singapore `sin1`) | Serverless Functions รันใกล้เคียงกับฐานข้อมูล Firebase RTDB (`asia-southeast1`) |
 
@@ -60,7 +60,7 @@
 ## 🚀 เริ่มต้นใช้งานและพัฒนา (Getting Started)
 
 ### ความต้องการของระบบ (Prerequisites)
-- Node.js version 20.x หรือใหม่กว่า
+- Node.js version 24.x (ตรงกับ CI และเครื่องมือ cleanup ที่รัน TypeScript โดยตรง)
 - npm version 9.x หรือใหม่กว่า
 
 ### 1. ติดตั้ง Dependencies
@@ -101,15 +101,19 @@ npm run typecheck
 # 3. ตรวจสอบความถูกต้องของเนื้อหาสถานการณ์และการแยกแยะบทบาท 15 คู่
 npm run validate:content
 
-# 4. รันชุดทดสอบ Unit Tests และ Concurrency/Resilience ทั้งหมด 70 ข้อ (Vitest)
+# 4. รันชุดทดสอบ Unit/Concurrency/Integration (Vitest)
+# SDK/Rules emulator tests จะ skip ถ้าไม่ได้เปิดโหมดทดสอบ local ชัดเจน
 npm test
 
-# 5. รันชุดทดสอบเสมือนจริงแบบ Multi-Browser E2E บน Mobile Pixel 7 และ Desktop Chrome (Playwright)
-npm run test:e2e
+# 5. รัน Auth/RTDB emulator, build และ E2E บน Pixel 7 + Desktop Chrome (เหมือน CI)
+# ต้องมี Firebase CLI, Java และ Playwright Chromium; ใช้ demo project ใหม่แยกจากข้อมูลจริง
+npm run verify:acceptance
 
 # 6. ทดสอบ Build โปรดักชัน (Next.js Production Build)
 npm run build
 ```
+
+ผลตรวจ checkout ปัจจุบัน: regression แบบจำลองผ่าน 332 ข้อ แต่ real emulator 10 ข้อยังไม่ได้รัน, E2E 14 กรณียังไม่ execute และ production build บนเครื่องนี้ติด Windows SWC Access denied จึงยังไม่ถือว่าตรวจรับครบหรือพร้อม release ดู [F08_ACCEPTANCE.md](docs/F08_ACCEPTANCE.md) และ [DELIVERY_CHECKLIST.md](docs/DELIVERY_CHECKLIST.md) คำสั่ง `verify:acceptance -- --list` ตรวจรายการ E2E โดยไม่เปิด browser และ `verify:acceptance -- --unit` รันเฉพาะ regression กับ emulator; ไม่ใช้ `test:e2e` ตรง ๆ กับ Vercel URL
 
 ---
 
@@ -128,6 +132,9 @@ npm run build
 3. กำหนดค่าใน `.env.local`:
    ```env
    NEXT_PUBLIC_USE_FIREBASE_EMULATOR=true
+   NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=http://127.0.0.1:9099
+   NEXT_PUBLIC_FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1
+   NEXT_PUBLIC_FIREBASE_DATABASE_EMULATOR_PORT=9000
    FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
    FIREBASE_DATABASE_EMULATOR_HOST=127.0.0.1:9000
    ```
@@ -141,16 +148,16 @@ npm run build
 
 ### ขั้นตอนที่ 1: Deploy กฎ Firebase Security Rules
 ```bash
-npx firebase-tools deploy --only database
+npx firebase-tools deploy --only database --project who-are-you-really-e6584
 ```
-คำสั่งนี้จะอ่านค่าจาก `.firebaserc` และอัปโหลด `database.rules.json` ไปยัง Firebase RTDB Instance จริงโดยอัตโนมัติ
+รันจากโฟลเดอร์ `who-are-you-really` ที่มี `firebase.json` และ `package.json` ตรวจ project/instance ก่อนรัน คำสั่งนี้เปลี่ยน Rules ของฐานข้อมูลจริง ส่วนการ deploy Vercel ไม่ได้อัปโหลด Rules ให้ ขั้น F07 แก้เฉพาะไฟล์ใน checkout ยังไม่ได้ deploy กฎหรือโค้ด
 
 ### ขั้นตอนที่ 2: ตั้งค่า Vercel Git Integration
 1. ไปที่ [vercel.com/new](https://vercel.com/new)
 2. นำเข้า Repository: `Who-Are-You-Really-BoardGame`
 3. Framework Preset: **Next.js**
-4. Root Directory: `./`
-5. กรอกค่า Environment Variables (ครอบคลุมทั้ง Production และ Preview):
+4. Root Directory: โฟลเดอร์ที่มี `package.json` และ `next.config.ts` (Git root ของ checkout นี้คือ `who-are-you-really` ไม่ใช่โฟลเดอร์ `gemini` ชั้นนอก)
+5. กรอกค่า Environment Variables ของแต่ละ environment ให้ client/server ชี้ Firebase project และ RTDB instance เดียวกัน ใช้ project/DB ทดสอบแยกสำหรับ Preview เพื่อไม่เขียนเกมทดสอบลง Production:
 
 | ชื่อตัวแปร (Variable) | สิทธิ์เข้าถึง | แหล่งข้อมูล |
 |---|---|---|
@@ -165,6 +172,8 @@ npx firebase-tools deploy --only database
 | `FIREBASE_PRIVATE_KEY` | Server Only | Service Account Private Key (`-----BEGIN PRIVATE KEY-----\n...`) |
 
 > ⚠️ **คำเตือนความปลอดภัย**: ตัวแปร `FIREBASE_CLIENT_EMAIL` และ `FIREBASE_PRIVATE_KEY` ต้อง **ไม่มี** คำนำหน้า `NEXT_PUBLIC_` โดยเด็ดขาด เพื่อป้องกันไม่ให้กุญแจลับหลุดเข้าไปในโค้ดฝั่งเบราว์เซอร์
+
+เปิด Anonymous provider ใน Firebase Authentication และใช้ Admin service account ของ project ที่กำหนด Server ใช้ REST ETag/conditional PUT ไป RTDB ด้วย access token ของ Admin; ไม่มี production memory fallback หรืองานที่ใช้ offline queue ตรวจ `/api/diagnostics` หลังตั้งค่า และสร้าง deployment ใหม่หลังเปลี่ยน environment variables ปิด `NEXT_PUBLIC_USE_FIREBASE_EMULATOR` และอย่าตั้ง `FIREBASE_AUTH_EMULATOR_HOST` / `FIREBASE_DATABASE_EMULATOR_HOST` บน Vercel
 
 ### ขั้นตอนที่ 3: เพิ่ม Authorized Domains ใน Firebase
 เมื่อ Vercel สร้างโดเมนให้เรียบร้อย (เช่น `who-are-you-really.vercel.app`):
@@ -226,7 +235,26 @@ Validator จะตรวจสอบ:
 1. **ระบบ Honor-System**: เกมนี้ออกแบบตามหลักความซื่อสัตย์ของผู้เล่น การเลือกคำตอบที่ไม่ตรงกับบทบาทลับไม่มีระบบลงโทษอัตโนมัติ ผู้เล่นจะได้รับความสนุกสูงสุดเมื่อตั้งใจสวมบทบาทตามการ์ดที่ได้รับ
 2. **ความสมดุลของบทบาท (Balance Tuning)**: ความยากง่ายและการกระจายตัวของตัวเลือกควรได้รับการปรับปรุงอย่างต่อเนื่องผ่านการ Playtest จริงกับกลุ่มผู้เล่น
 3. **การจำกัด Session ตามอุปกรณ์ (Device-Bound Sessions)**: การกู้คืนการเล่นในกรณีโหลดหน้าจอใหม่ (Reload/Refresh) อ้างอิงจาก Anonymous Auth Token ที่เก็บไว้ในเบราว์เซอร์ของเครื่องนั้น ๆ การย้ายไปเล่นต่อบนเครื่องอื่นไม่อยู่ในขอบเขต MVP
-4. **การล้างข้อมูลห้องเก่า (Room Cleanup)**: ห้องที่ไม่มีการใช้งานเกิน 2 ชั่วโมงจะหมดอายุอัตโนมัติผ่านการตรวจสอบ TTL ฝั่งเซิร์ฟเวอร์ การลบข้อมูลถาวรในฐานข้อมูลต้องอาศัย Scheduled Function / Cron Job ภายนอก
+4. **อายุห้อง (Room TTL)**: เริ่มที่ 24 ชั่วโมงจากคำขอสร้างห้อง และต่ออายุเป็น 24 ชั่วโมงหลังการเข้าร่วมใหม่หรือคำสั่งที่ผ่านการตรวจสิทธิ์/context และเปลี่ยน game state (ready/start/ack/answer/decision/next round/rematch/leave) ใช้ expiry เดิมเป็นค่าต่ำสุด การอ่าน, polling, presence, join ซ้ำ/reconnect, create/action replay, คำสั่งผิด และคำสั่งที่ไม่เปลี่ยนสถานะไม่ต่ออายุ Expiry เก็บเฉพาะ server เพื่อไม่เผยกิจกรรมลับผ่าน public revision API คืน 410 เมื่อห้องหมดอายุ และ Rules ปิด reads/publication; own presence deletion ยังทำได้หลัง expiry/leave
+
+## 🧹 ดูแลข้อมูลห้อง (Manual Maintenance)
+
+`npm run cleanup:rooms` เป็นเครื่องมือ manual สำหรับฐานข้อมูลขนาดเล็ก ค่าเริ่มต้นเป็น **dry-run**: อ่านและแสดงเฉพาะ path ที่เข้าเกณฑ์ ไม่มีการเขียนหรือลบ ใช้ Node.js 24 และ Application Default Credentials ผ่าน service account file ใน `GOOGLE_APPLICATION_CREDENTIALS`; ไม่โหลด `.env.local` หรือใช้ private key ของเว็บโดยอัตโนมัติ
+
+```powershell
+# แสดงวิธีใช้ โดยไม่เชื่อมต่อฐานข้อมูล
+npm.cmd run cleanup:rooms -- --help
+
+# ตรวจฐานข้อมูลจริงแบบอ่านอย่างเดียว ต้องตั้ง ADC และระบุ project/URL ให้ถูกต้อง
+npm.cmd run cleanup:rooms -- --project who-are-you-really-e6584 --database-url https://who-are-you-really-e6584-default-rtdb.asia-southeast1.firebasedatabase.app/ --dry-run
+
+# ตรวจไฟล์ JSON จำลองโดยไม่ใช้ credentials (รองรับเฉพาะ dry-run)
+npm.cmd run cleanup:rooms -- --fixture path/to/fixture.json
+```
+
+การลบจริงต้องเพิ่ม `--apply --confirm-project PROJECT` ให้ตรงกับ `--project` หลังตรวจ dry-run และเป้าหมายฐานข้อมูลแล้ว เครื่องมือใช้ root ETag CAS ตรวจ expiry/generation ซ้ำ ลบห้องที่หมดอายุพร้อม presence ใน commit เดียว ข้ามห้องที่ต่ออายุหรือสร้างใหม่ระหว่าง scan และลบ orphan presence ที่ยังไม่มีห้อง ณ transaction เดียวกัน ลบ rate-limit records ที่เก่ากว่า 24 ชั่วโมง และ creation reservations ที่เก่ากว่า 24 ชั่วโมงซึ่งไม่เกี่ยวกับห้อง active; records ที่อ่าน metadata ไม่ได้จะถูกเก็บไว้
+
+ค่าเริ่มต้น 100 candidates ต่อ pass (สูงสุด 500; presence ที่ติดกับห้องลบพร้อมกัน) การอ่าน root จำกัด 5 MiB, จำกัด retry/timeout และต้อง dry-run ใหม่หลังแต่ละ pass ฐานข้อมูลใหญ่หรือมี contention มากอาจปฏิเสธงานนี้โดยไม่คืนผลลบที่ยืนยัน หาก PUT response หายอาจ commit แล้ว ให้ตรวจ dry-run ใหม่และอย่าสรุปว่าการลบล้มเหลวแน่นอน ไม่ติดตั้ง scheduler และยังไม่มีการลบข้อมูลจริงใน F07 รายละเอียดอยู่ใน [F07_EXPIRY_MAINTENANCE.md](docs/F07_EXPIRY_MAINTENANCE.md)
 
 ---
 

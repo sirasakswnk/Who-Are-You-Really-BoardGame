@@ -3,7 +3,7 @@
  * Verifies Firebase ID Token from incoming HTTP Authorization header
  */
 
-import { adminAuth, isAdminInitializedWithCredentials, adminInitError } from '../firebase/admin';
+import { adminAuth, isAdminInitializedWithCredentials } from '../firebase/admin';
 
 export interface AuthContext {
   uid: string;
@@ -35,17 +35,16 @@ export async function verifyAuthToken(req: Request): Promise<AuthContext | null>
     !process.env.FIREBASE_AUTH_EMULATOR_HOST &&
     process.env.NODE_ENV !== 'test'
   ) {
-    console.error(
-      `Firebase Admin credentials not initialized. Reason: ${adminInitError || 'Missing credentials'}`
-    );
+    console.error('Firebase Admin credentials unavailable');
     return null;
   }
 
   try {
     const decoded = await adminAuth.verifyIdToken(token);
     return { uid: decoded.uid };
-  } catch (err) {
-    console.error('Failed to verify Firebase ID token:', err);
+  } catch {
+    // SDK errors can embed the rejected token. Never log their payload.
+    console.error('Failed to verify Firebase ID token');
     return null;
   }
 }

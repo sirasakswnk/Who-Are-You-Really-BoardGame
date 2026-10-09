@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { RoundResult, PlayerSeat, ROLES, ROUNDS_PER_MATCH } from '@/lib/game/types';
 
 interface RoundRevealViewProps {
+  hasAcknowledged?: boolean;
+  actionBlocked?: boolean;
   roundSummary: RoundResult | null;
   roundIndex: number;
   mySeat: 0 | 1;
@@ -13,6 +15,8 @@ interface RoundRevealViewProps {
 }
 
 export default function RoundRevealView({
+  actionBlocked = false,
+  hasAcknowledged = false,
   roundSummary,
   roundIndex,
   mySeat,
@@ -20,7 +24,6 @@ export default function RoundRevealView({
   matchScores,
   onNextRoundReady,
 }: RoundRevealViewProps) {
-  const [hasAcknowledged, setHasAcknowledged] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const opponentSeat = mySeat === 0 ? 1 : 0;
@@ -30,10 +33,10 @@ export default function RoundRevealView({
   const isFinalRound = roundIndex === ROUNDS_PER_MATCH - 1;
 
   const handleNext = async () => {
+    if (actionBlocked || isSubmitting || hasAcknowledged) return;
     setIsSubmitting(true);
     try {
       await onNextRoundReady();
-      setHasAcknowledged(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -156,7 +159,7 @@ export default function RoundRevealView({
           <button
             className="btn btn-primary btn-lg next-round-btn"
             onClick={handleNext}
-            disabled={isSubmitting}
+            disabled={isSubmitting || actionBlocked}
           >
             {isFinalRound
               ? 'ดูสรุปผลตัดสินทั้งเกม! 🏆'

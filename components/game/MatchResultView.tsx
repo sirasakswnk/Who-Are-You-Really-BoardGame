@@ -5,6 +5,7 @@ import { PlayerSeat, RoundResult, ROLES } from '@/lib/game/types';
 import { determineMatchWinner } from '@/lib/game/scoring';
 
 interface MatchResultViewProps {
+  actionBlocked?: boolean;
   players: [PlayerSeat | null, PlayerSeat | null];
   mySeat: 0 | 1;
   matchScores: [number, number];
@@ -12,9 +13,11 @@ interface MatchResultViewProps {
   rematchRequests: [boolean, boolean];
   onRequestRematch: () => Promise<void>;
   onBackToHome: () => void;
+  leaveBlocked?: boolean;
 }
 
 export default function MatchResultView({
+  actionBlocked = false,
   players,
   mySeat,
   matchScores,
@@ -22,6 +25,7 @@ export default function MatchResultView({
   rematchRequests,
   onRequestRematch,
   onBackToHome,
+  leaveBlocked = false,
 }: MatchResultViewProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -40,6 +44,7 @@ export default function MatchResultView({
   const oppRematch = rematchRequests[opponentSeat];
 
   const handleRematch = async () => {
+    if (actionBlocked || isSubmitting || myRematch) return;
     setIsSubmitting(true);
     try {
       await onRequestRematch();
@@ -113,6 +118,25 @@ export default function MatchResultView({
         </div>
       </div>
 
+      <section className="evidence-history-section">
+        <h3 className="evidence-history-title">รายละเอียดสถานการณ์และคำทายที่เปิดเผยแล้ว</h3>
+        {roundHistory.map(round => <details key={round.roundIndex} className="round-breakdown-card">
+          <summary>รอบที่ {round.roundIndex + 1} — คุณ +{round.scores[mySeat]} / เพื่อน +{round.scores[opponentSeat]}</summary>
+          <p>บทคุณ: {ROLES[round.roles[mySeat]].name} | บทเพื่อน: {ROLES[round.roles[opponentSeat]].name}</p>
+          {([mySeat, opponentSeat] as const).map(seat => <div key={seat}>
+            <p>{seat === mySeat ? 'คำทายของคุณ' : 'คำทายของเพื่อน'}: {round.guesses[seat] ? ROLES[round.guesses[seat]!].name : 'ไม่ได้ทาย'}
+              {round.guessClueIndex[seat] !== null && ` หลังข้อที่ ${round.guessClueIndex[seat]! + 1}`}</p>
+            <p>{round.reason[seat]}</p>
+          </div>)}
+          {round.evidence?.length ? round.evidence.map(entry => <div className="evidence-item" key={entry.clueIndex}>
+            <span className="evidence-clue-badge">ข้อ {entry.clueIndex + 1}</span>
+            <div className="evidence-text"><p>{entry.prompt}</p>
+              <p>คุณ: {entry.answers[mySeat]} | เพื่อน: {entry.answers[opponentSeat]}</p>
+            </div>
+          </div>) : <p>ห้องเดิมไม่ได้บันทึกข้อความหลักฐานของรอบนี้</p>}
+        </details>)}
+      </section>
+
       {/* Rematch Status / Buttons */}
       <div className="match-result-footer">
         {oppRematch && !myRematch && (
@@ -125,12 +149,12 @@ export default function MatchResultView({
           <button
             className={`btn ${myRematch ? 'btn-secondary' : 'btn-primary'} btn-lg rematch-btn`}
             onClick={handleRematch}
-            disabled={myRematch || isSubmitting}
+            disabled={myRematch || isSubmitting || actionBlocked}
           >
             {myRematch ? 'ขอล้างตาแล้ว (รอเพื่อนตอบรับ...)' : 'ขอเล่นอีกรอบ (Rematch) 🔄'}
           </button>
 
-          <button className="btn btn-secondary btn-lg home-btn" onClick={onBackToHome}>
+          <button className="btn btn-secondary btn-lg home-btn" disabled={leaveBlocked} onClick={onBackToHome}>
             กลับหน้าแรก 🏠
           </button>
         </div>

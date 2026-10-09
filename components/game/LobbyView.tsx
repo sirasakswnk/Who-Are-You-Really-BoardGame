@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { PlayerSeat } from '@/lib/game/types';
 
 interface LobbyViewProps {
+  actionBlocked?: boolean;
   roomCode: string;
   players: [PlayerSeat | null, PlayerSeat | null];
   mySeat: 0 | 1;
@@ -14,6 +15,7 @@ interface LobbyViewProps {
 }
 
 export default function LobbyView({
+  actionBlocked = false,
   roomCode,
   players,
   mySeat,
@@ -45,6 +47,7 @@ export default function LobbyView({
   };
 
   const handleReadyClick = async () => {
+    if (actionBlocked || isSubmitting) return;
     setIsSubmitting(true);
     try {
       await onToggleReady(!myReady);
@@ -54,6 +57,7 @@ export default function LobbyView({
   };
 
   const handleStartClick = async () => {
+    if (actionBlocked || isSubmitting || !isHost || !bothReady) return;
     setIsSubmitting(true);
     try {
       await onStartMatch();
@@ -167,7 +171,7 @@ export default function LobbyView({
             <button
               className={`btn ${myReady ? 'btn-secondary' : 'btn-success'} btn-lg lobby-ready-btn`}
               onClick={handleReadyClick}
-              disabled={isSubmitting}
+              disabled={isSubmitting || actionBlocked}
             >
               {myReady ? 'ยกเลิกสถานะพร้อม' : 'ฉันพร้อมแล้ว! ✓'}
             </button>
@@ -177,7 +181,7 @@ export default function LobbyView({
               <button
                 className="btn btn-primary btn-lg lobby-start-btn"
                 onClick={handleStartClick}
-                disabled={!bothReady || isSubmitting}
+                disabled={!bothReady || isSubmitting || actionBlocked}
               >
                 {bothReady ? 'เริ่มการสืบสวน! 🔍' : 'รอทั้งสองคนกดพร้อม...'}
               </button>

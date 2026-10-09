@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { POST as createRoute } from '../../app/api/room/create/route';
 import { POST as joinRoute } from '../../app/api/room/join/route';
 import { POST as readyRoute } from '../../app/api/room/ready/route';
@@ -7,11 +7,23 @@ import { POST as actionRoute } from '../../app/api/game/action/route';
 import { GET as getRoomRoute } from '../../app/api/room/[code]/route';
 import { memoryRooms } from '../../lib/server/roomService';
 import { normalizePrivateKey } from '../../lib/firebase/admin';
+import * as roomStore from '../../lib/server/roomStore';
+import { fakeRTDB } from '../helpers/fakeRTDB';
+import { randomUUID } from 'node:crypto';
+import { decodeRoomRecord } from '../../lib/server/roomSchema';
 
 describe('API Route Handlers (app/api/*)', () => {
+  let database: ReturnType<typeof fakeRTDB>;
   beforeEach(() => {
     memoryRooms.clear();
+    database = fakeRTDB();
+    vi.spyOn(roomStore, 'getRoomStore').mockImplementation(() => database.store());
   });
+  afterEach(() => vi.restoreAllMocks());
+  function context(code: string) {
+    const view = decodeRoomRecord(database.values.get(`rooms/${code}`), code)!.public;
+    return { actionId: randomUUID(), matchId: view.matchId, roundId: view.roundId, clueIndex: view.clueIndex };
+  }
 
   function createAuthRequest(url: string, body?: unknown, token = 'mock-token-host123') {
     return new Request(url, {
@@ -98,20 +110,20 @@ describe('API Route Handlers (app/api/*)', () => {
       await joinRoute(joinReq);
 
       // 3. Both set ready
-      const r1 = createAuthRequest('http://localhost:3000/api/room/ready', { code, ready: true }, 'mock-token-host123');
-      const r2 = createAuthRequest('http://localhost:3000/api/room/ready', { code, ready: true }, 'mock-token-guest456');
+      const r1 = createAuthRequest('http://localhost:3000/api/room/ready', { code, ...context(code), ready: true }, 'mock-token-host123');
+      const r2 = createAuthRequest('http://localhost:3000/api/room/ready', { code, ...context(code), ready: true }, 'mock-token-guest456');
       await readyRoute(r1);
       await readyRoute(r2);
 
       // 4. Host starts
-      const startReq = createAuthRequest('http://localhost:3000/api/room/start', { code }, 'mock-token-host123');
+      const startReq = createAuthRequest('http://localhost:3000/api/room/start', { code, ...context(code) }, 'mock-token-host123');
       const startRes = await startRoute(startReq);
       expect(startRes.status).toBe(200);
 
       // 5. Submit action ROLE_ACK
       const actReq = createAuthRequest(
         'http://localhost:3000/api/game/action',
-        { code, actionId: 'act-1', action: { type: 'ROLE_ACK' } },
+        { code, ...context(code), action: { type: 'ROLE_ACK' } },
         'mock-token-host123'
       );
       const actRes = await actionRoute(actReq);
@@ -142,6 +154,39 @@ describe('API Route Handlers (app/api/*)', () => {
     it('normalizes Windows CRLF to LF', () => {
       const input = 'line1\r\nline2\r\nline3';
       expect(normalizePrivateKey(input)).toBe('line1\nline2\nline3');
+    });
+  });
+
+  describe('Committed storage and recovery HTTP responses', () => {
+    it('returns 503 with retryable=true when create persistence fails', async () => {
+      database.rejectWrites(true);
+      const response = await createRoute(createAuthRequest('http://localhost/api/room/create', {
+        displayName: 'หนึ่ง', avatarId: 'cat', requestId: 'failed-create',
+      }));
+      expect(response.status).toBe(503);
+      expect(response.headers.get('Cache-Control')).toBe('no-store');
+      expect(await response.json()).toMatchObject({ retryable: true });
+      expect(database.values.size).toBe(0);
+      expect(memoryRooms.size).toBe(0);
+    });
+    it('returns the same code on create replay and rejects changed create payload', async () => {
+      const body = { displayName: 'หนึ่ง', avatarId: 'cat', requestId: 'create-api-retry' };
+      const first = await createRoute(createAuthRequest('http://localhost/api/room/create', body));
+      const original = await first.json();
+      const replay = await createRoute(createAuthRequest('http://localhost/api/room/create', body));
+      expect(await replay.json()).toEqual(original);
+      const changed = await createRoute(createAuthRequest('http://localhost/api/room/create', { ...body, displayName: 'changed' }));
+      expect(changed.status).toBe(409);
+      expect(await changed.json()).toMatchObject({ retryable: false });
+    });
+    it('returns a storage error instead of 404 if a fresh GET fails', async () => {
+      vi.mocked(roomStore.getRoomStore).mockReturnValue({
+        read: async () => { throw new roomStore.RoomStorageError(); },
+        transact: async () => { throw new roomStore.RoomStorageError(); },
+      });
+      const response = await getRoomRoute(createAuthRequest('http://localhost/api/room/ABC234'), { params: Promise.resolve({ code: 'ABC234' }) });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ retryable: true });
     });
   });
 });
