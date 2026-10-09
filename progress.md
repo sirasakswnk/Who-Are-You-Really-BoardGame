@@ -152,6 +152,19 @@
 - [x] Vercel Environment Variables specification prepared: Clean split between browser (`NEXT_PUBLIC_*`) and server-only (`FIREBASE_*`) admin credentials.
 - [x] Full validation suite passed against live rules: 70/70 Vitest tests pass, TypeScript strict clean, ESLint clean, Next.js build clean.
 
-## M8 — Delivery
+## M8 — Delivery (ส่งมอบงาน) ✅
 
-- [ ] Not started
+- [x] Comprehensive Operational Manual ([`README.md`](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/README.md)):
+  - Full game rules, 6 roles, Golden Rule, and 5/4/3/2 scoring schedule.
+  - Setup, dev (`npm ci`, `npm run dev`), testing locally with 2 browser sessions, and mobile LAN Wi-Fi play (`http://<LAN_IP>:3000`).
+  - Firebase Local Emulator Suite manual (`firebase emulators:start`).
+  - Complete testing commands list (lint, typecheck, validate content, vitest, playwright, build).
+  - Deployment manual: Explaining rules deployment separation from web app, Vercel Git Integration, environment variables table, and authorized domains.
+  - Content Authoring & Extension Guide: Step-by-step instructions for adding new scenarios, schema requirements, editorial metadata, and running `npm run validate:content`.
+  - Explicit known limitations: Honor system, playtest balance, device-bound sessions, memory TTL cleanup.
+- [x] Official Delivery & Audit Checklist ([`docs/DELIVERY_CHECKLIST.md`](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/docs/DELIVERY_CHECKLIST.md)):
+  - Verified completion of all Milestones (M0 Bootstrap through M8 Delivery).
+  - 100% compliance with `plan.md` Section 10 (Definition of Done).
+  - Cleanliness audit passed: Zero production mocks, zero TODO/FIXME items, zero toast-only stubs, zero secret leaks.
+- [x] All 70 Vitest unit/concurrency tests + 8 Playwright E2E tests + TypeScript strict + ESLint + Next.js build passed.
+- [x] Project state: **Fully delivered and production-ready! 🚀**
