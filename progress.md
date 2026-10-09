@@ -113,9 +113,24 @@
   - Total test suite: 62 tests across 8 test suites (PASS ✅)
 - [x] Full build verification: TypeScript strict passed, ESLint clean (0 errors, 0 warnings), Next.js production build passed (Static + Partial Prerender)
 
-## M5 — E2E Tests
+## M5 — E2E Tests & Resilience ✅
 
-- [ ] Not started
+- [x] Concurrency & Race-Condition Suite ([tests/integration/resilience-concurrency.test.ts](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/tests/integration/resilience-concurrency.test.ts)):
+  - 8 tests passing, verifying parallel submissions, action idempotency, data privacy projection isolation, reconnect/refresh seat preservation, and expired room rejection.
+- [x] Full Playwright E2E Suite ([tests/e2e/](file:///d:/Vscode/BoardGame/Who%20Are%20You%20Really/gemini/who-are-you-really/tests/e2e/)):
+  - Multi-context isolated browser emulation across **Mobile Pixel 7 (393px)** and **Desktop Chrome (1280px)**.
+  - `two-player-game.spec.ts`: Full loop from room creation, friend invite join, ready check, match start, role briefing, scenario question selection, answer reveal, deduction guessing, and phase advancement.
+  - `resilience.spec.ts`: Session reload without room/seat loss, atomic 3rd player full room rejection, and leave room confirmation dialog redirect to home.
+- [x] Robust Client-Server Resilience Enhancements:
+  - Auth hydration fixed with `auth.authStateReady()`.
+  - RTDB listener error callbacks preventing uncaught exceptions on permissions or offline states.
+  - Full state normalization in `GameContainer` guarding against RTDB pruning empty arrays (`revealedAnswers`, `matchScores`, `rematchRequests`, sparse `players`).
+- [x] Test Suite Results:
+  - Vitest: 70/70 tests passing across 9 test suites (`npm test`).
+  - Playwright: 8/8 tests passing across Mobile Pixel 7 and Desktop Chrome (`npx playwright test`).
+  - TypeScript: Zero type errors (`npx tsc --noEmit`).
+  - ESLint: Clean (0 errors, 0 warnings).
+  - Next.js Production Build: Successfully generated.
 
 ## M6 — GitHub + CI
 

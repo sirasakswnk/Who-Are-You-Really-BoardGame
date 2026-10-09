@@ -231,6 +231,10 @@ export async function joinRoom(
     return { success: false, error: 'Room not found or expired' };
   }
 
+  if (Date.now() > room.server.expiresAt) {
+    return { success: false, error: 'Room expired' };
+  }
+
   // Check if user is already a member (reconnect / refresh)
   if (room.members[uid]) {
     return { success: true, seat: room.members[uid].seat };
@@ -238,7 +242,7 @@ export async function joinRoom(
 
   // Check if room is full (seat 1 occupied)
   if (room.server.gameState.seats[1] !== null) {
-    return { success: false, error: 'Room is full (2 players maximum)' };
+    return { success: false, error: 'ห้องเต็มแล้ว (เล่นได้สูงสุด 2 คน)' };
   }
 
   // Assign seat 1 to the new player
@@ -359,12 +363,22 @@ export async function dispatchGameAction(
   action: GameAction
 ): Promise<{ success: boolean; error?: string }> {
   const room = memoryRooms.get(code);
-  if (!room || !room.members[uid]) {
-    return { success: false, error: 'Room or player not found' };
+  if (!room) {
+    return { success: false, error: 'Room not found' };
+  }
+  if (!room.members[uid]) {
+    return { success: false, error: 'Not a member of this room' };
+  }
+  if (Date.now() > room.server.expiresAt) {
+    return { success: false, error: 'Room expired' };
   }
 
-  // Idempotency check: if actionId was already processed, return duplicate success
-  if (room.server.receipts[actionId]) {
+  // Idempotency check: if actionId was already processed, verify payload matches
+  const existingReceipt = room.server.receipts[actionId];
+  if (existingReceipt) {
+    if (existingReceipt.type !== action.type) {
+      return { success: false, error: 'Duplicate actionId with mismatched payload' };
+    }
     return { success: true };
   }
 
@@ -397,3 +411,33 @@ export async function dispatchGameAction(
 
   return { success: true };
 }
+
+/**
+ * Retrieves public and private player projections for a given user.
+ */
+export async function getRoomProjections(
+  code: string,
+  uid: string
+): Promise<{
+  public: RoomRecord['public'];
+  private: RoomRecord['private'][string] | null;
+  seat: 0 | 1 | null;
+  isHost: boolean;
+}> {
+  let room = memoryRooms.get(code);
+  if (!room) {
+    room = (await fetchRoomFromDatabase(code)) ?? undefined;
+    if (room) memoryRooms.set(code, room);
+  }
+  if (!room) {
+    throw new Error('Room not found');
+  }
+  const member = room.members[uid];
+  return {
+    public: room.public,
+    private: member ? room.private[uid] ?? null : null,
+    seat: member ? member.seat : null,
+    isHost: member ? member.isHost : false,
+  };
+}
+

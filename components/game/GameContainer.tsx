@@ -48,6 +48,38 @@ interface PrivateState {
   hasGuessed: boolean;
 }
 
+function normalizePublicState(pub: Partial<PublicState> | null | undefined, code: string): PublicState {
+  return {
+    code: pub?.code || code,
+    phase: pub?.phase || 'LOBBY',
+    matchId: pub?.matchId || '',
+    roundIndex: pub?.roundIndex ?? 0,
+    clueIndex: pub?.clueIndex ?? 0,
+    matchScores: Array.isArray(pub?.matchScores)
+      ? [pub.matchScores[0] ?? 0, pub.matchScores[1] ?? 0]
+      : [0, 0],
+    players: Array.isArray(pub?.players)
+      ? [pub.players[0] ?? null, pub.players[1] ?? null]
+      : [null, null],
+    scenario: pub?.scenario ?? null,
+    revealedAnswers: Array.isArray(pub?.revealedAnswers) ? pub.revealedAnswers : [],
+    roundSummary: pub?.roundSummary ?? null,
+    rematchRequests: Array.isArray(pub?.rematchRequests)
+      ? [Boolean(pub.rematchRequests[0]), Boolean(pub.rematchRequests[1])]
+      : [false, false],
+  };
+}
+
+function normalizePrivateState(priv: Partial<PrivateState> | null | undefined): PrivateState {
+  return {
+    role: priv?.role ?? null,
+    guess: priv?.guess ?? null,
+    guessClueIndex: priv?.guessClueIndex ?? null,
+    committedAnswer: priv?.committedAnswer ?? null,
+    hasGuessed: Boolean(priv?.hasGuessed),
+  };
+}
+
 export default function GameContainer({ roomCode }: GameContainerProps) {
   const router = useRouter();
 
@@ -116,8 +148,8 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
 
         setMySeat(data.seat);
         setIsHost(data.isHost);
-        if (data.public) setPublicState(data.public);
-        if (data.private) setPrivateState(data.private);
+        if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
+        if (data.private) setPrivateState(normalizePrivateState(data.private));
 
         setIsLoading(false);
       } catch (err: unknown) {
@@ -146,17 +178,31 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
       publicRef = ref(rtdb, `rooms/${roomCode}/public`);
       privateRef = ref(rtdb, `rooms/${roomCode}/private/${currentUserUid}`);
 
-      onValue(publicRef, (snap) => {
-        if (snap.exists()) {
-          setPublicState(snap.val());
+      onValue(
+        publicRef,
+        (snap) => {
+          if (snap.exists()) {
+            setPublicState(normalizePublicState(snap.val(), roomCode));
+          }
+        },
+        (error) => {
+          // RTDB listen error, silently fallback to polling interval
+          console.warn('RTDB public sync error:', error.message);
         }
-      });
+      );
 
-      onValue(privateRef, (snap) => {
-        if (snap.exists()) {
-          setPrivateState(snap.val());
+      onValue(
+        privateRef,
+        (snap) => {
+          if (snap.exists()) {
+            setPrivateState(normalizePrivateState(snap.val()));
+          }
+        },
+        (error) => {
+          // RTDB listen error, silently fallback to polling interval
+          console.warn('RTDB private sync error:', error.message);
         }
-      });
+      );
     } catch {
       // If client cannot connect to RTDB directly, use polling interval
     }
@@ -170,15 +216,15 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.public) setPublicState(data.public);
-          if (data.private) setPrivateState(data.private);
+          if (data.public) setPublicState(normalizePublicState(data.public, roomCode));
+          if (data.private) setPrivateState(normalizePrivateState(data.private));
           if (typeof data.seat === 'number') setMySeat(data.seat);
           if (typeof data.isHost === 'boolean') setIsHost(data.isHost);
         }
       } catch {
         // Ignore background polling glitches
       }
-    }, 2000);
+    }, 1000);
 
     return () => {
       clearInterval(pollInterval);
@@ -214,8 +260,8 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
         });
         if (syncRes.ok) {
           const syncData = await syncRes.json();
-          if (syncData.public) setPublicState(syncData.public);
-          if (syncData.private) setPrivateState(syncData.private);
+          if (syncData.public) setPublicState(normalizePublicState(syncData.public, roomCode));
+          if (syncData.private) setPrivateState(normalizePrivateState(syncData.private));
         }
       } catch {
         // Ignore
@@ -329,7 +375,7 @@ export default function GameContainer({ roomCode }: GameContainerProps) {
 
   // Opponent Answered indicator for current clue
   const oppHasAnswered = Boolean(
-    publicState.revealedAnswers.find((r) => r.clueIndex === publicState.clueIndex) ||
+    (publicState.revealedAnswers ?? []).find((r) => r.clueIndex === publicState.clueIndex) ||
     publicState.phase === 'ANSWER_REVEAL'
   );
 

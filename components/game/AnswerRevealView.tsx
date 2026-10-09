@@ -120,7 +120,7 @@ export default function AnswerRevealView({
           </div>
         ) : (
           <button
-            className="btn btn-primary btn-lg proceed-btn"
+            className="btn btn-primary btn-lg proceed-btn proceed-decide-btn"
             onClick={handleAcknowledge}
             disabled={isSubmitting}
           >

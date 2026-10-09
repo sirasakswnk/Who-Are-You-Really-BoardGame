@@ -62,7 +62,7 @@ describe('Room Service (lib/server/roomService.ts)', () => {
 
       const thirdJoin = await joinRoom(code, 'guest-789', 'คนแปลกหน้า', 'owl');
       expect(thirdJoin.success).toBe(false);
-      expect(thirdJoin.error).toContain('Room is full');
+      expect(thirdJoin.error).toContain('ห้องเต็มแล้ว');
     });
 
     it('allows existing player to resume / reconnect to their assigned seat', async () => {

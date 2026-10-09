@@ -9,7 +9,6 @@ import {
   Auth,
   connectAuthEmulator,
   signInAnonymously,
-  onAuthStateChanged,
   User,
 } from 'firebase/auth';
 import {
@@ -52,23 +51,15 @@ if (
 
 /**
  * Ensures user is authenticated anonymously with persistent session.
+ * Uses auth.authStateReady() to ensure stored session is restored before creating a new one.
  */
 export async function ensureAnonymousAuth(): Promise<User> {
-  return new Promise((resolve, reject) => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        unsubscribe();
-        resolve(user);
-      } else {
-        try {
-          const cred = await signInAnonymously(auth);
-          unsubscribe();
-          resolve(cred.user);
-        } catch (err) {
-          unsubscribe();
-          reject(err);
-        }
-      }
-    });
-  });
+  if (typeof auth.authStateReady === 'function') {
+    await auth.authStateReady();
+  }
+  if (auth.currentUser) {
+    return auth.currentUser;
+  }
+  const cred = await signInAnonymously(auth);
+  return cred.user;
 }
