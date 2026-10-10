@@ -1,0 +1,42 @@
+.dialog {
+  --leave-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .28 -.115'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  position: fixed;
+  inset: 0;
+  width: min(480px, calc(100% - 24px));
+  max-width: none;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 38px 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-th);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.dialog::backdrop { background: rgba(27, 42, 74, .6); backdrop-filter: blur(4px); }
+.backing { position: relative; isolation: isolate; }
+.backing::before { content: ""; position: absolute; inset: 6px -5px -6px 5px; z-index: 0; border: 1.5px solid var(--ink); border-radius: 18px; background: var(--leave-grain), var(--blush); transform: skewY(.6deg); pointer-events: none; }
+.dialog .folder { position: relative; z-index: 1; width: 100%; max-width: none; margin: 0; padding: 20px; border: 2px solid var(--ink); border-radius: 0 18px 18px 18px; background: var(--leave-grain), var(--folder); box-shadow: 0 5px 0 var(--soft-shadow); text-align: left; }
+.tab { position: absolute; top: -30px; left: -2px; min-height: 32px; padding: 5px 14px; border: 2px solid var(--ink); border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--leave-grain), var(--folder); font-size: 12px; font-weight: 800; }
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.label { color: var(--ink-soft); font-size: 11px; font-weight: 700; line-height: 1.8; }
+.stamp { padding: 3px 8px; border: 1.5px solid var(--brick); border-radius: 4px; background: var(--blush); color: var(--brick); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
+.dialog .title { margin: 16px 0 20px; color: var(--ink); font: 800 26px/1.5 var(--font-th); }
+.paper { position: relative; padding: 18px 16px; border: 1px solid rgba(27, 42, 74, .3); border-radius: 10px; background: var(--leave-grain), repeating-linear-gradient(0deg, rgba(111, 102, 82, .065) 0 1px, transparent 1px 32px), var(--paper); }
+.paper::before { content: ""; position: absolute; top: -8px; left: 16px; width: 38px; height: 14px; background: var(--leave-grain), rgba(247, 224, 143, .9); transform: rotate(-4deg); pointer-events: none; }
+.paperLabel { display: block; margin-bottom: 8px; color: var(--ink-soft); font-size: 12px; font-weight: 700; }
+.dialog .description { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; }
+.dialog .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+.dialog .folder .actions > button { min-width: 0; min-height: 50px; height: auto; padding: 10px 12px; border: 2px solid var(--ink); border-radius: 10px; background: var(--leave-grain), var(--paper); color: var(--ink); box-shadow: 0 3px 0 var(--soft-shadow); font: 800 14px/1.8 var(--font-th); overflow-wrap: anywhere; cursor: pointer; }
+.dialog .folder .actions > :global(.btn-danger) { background: var(--brick); color: var(--paper); box-shadow: 0 3px 0 var(--ink); }
+.dialog .folder .actions > button:disabled { background: #EAE1CB; color: var(--stone); opacity: 1; cursor: not-allowed; transform: none; box-shadow: 0 2px 0 var(--soft-shadow); }
+.actions > button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.dialog .folder .actions > button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+@media (max-width: 480px) { .dialog .folder { padding: 18px 14px; } .dialog .title { font-size: 24px; } .paper { padding: 16px 12px; } .dialog .description { font-size: 14px; } .dialog .actions { gap: 10px; } }
+@media (max-height: 450px) { .dialog .folder { padding-top: 14px; padding-bottom: 14px; } .dialog .title { margin: 10px 0 14px; font-size: 22px; } .paper { padding-block: 12px; } .dialog .actions { margin-top: 14px; } }
+@media (hover: hover) { .dialog .folder .actions > button:hover:not(:disabled) { background: var(--leave-grain), #F9EED4; } .dialog .folder .actions > :global(.btn-danger):hover:not(:disabled) { background: #983F28; } }
+@media (prefers-reduced-motion: no-preference) { .dialog[open] .folder { animation: file-in .2s ease-out; } .actions > button { transition: background-color .15s ease, transform .15s ease; } }
+@media (prefers-reduced-motion: reduce) { .dialog .folder, .actions > button { animation: none; transition: none; } }
+@keyframes file-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }

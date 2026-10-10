@@ -1,0 +1,200 @@
+/* Apply the dossier palette to this screen and its shared header only. */
+:global(.game-screen-wrapper):has(.folder) {
+  --role-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .28 -.115'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  --paper-light: var(--paper);
+  --ink-muted: var(--ink-soft);
+  --terracotta: var(--brick);
+  --teal: var(--sea);
+  --line: rgba(27, 42, 74, .22);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --shadow-sm: 0 3px 0 var(--soft-shadow);
+  --shadow-md: 0 5px 0 var(--soft-shadow);
+  --font-heading: var(--font-th);
+  --tr-fast: .15s ease;
+  gap: 10px;
+}
+
+:global(.game-main-content):has(> .folder) {
+  position: relative;
+  isolation: isolate;
+  min-height: 0;
+  padding: 0;
+  margin-top: 38px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+:global(.game-main-content):has(> .folder)::before {
+  content: "";
+  position: absolute;
+  inset: 7px -7px -7px 7px;
+  z-index: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 18px;
+  background: var(--role-grain), var(--blush);
+  transform: rotate(.8deg);
+  pointer-events: none;
+}
+
+:global(.game-screen-wrapper):has(.folder) > :global(.room-sync-status) {
+  order: 1;
+  padding: 0 10px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+:global(.game-screen-wrapper):has(.folder) > :global(.room-sync-status) p { margin: 3px 0 0; }
+
+:global(.game-screen-wrapper):has(.folder) :global(.game-header) {
+  background: var(--role-grain), var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px 10px;
+  box-shadow: 0 3px 0 rgba(27, 42, 74, .1);
+}
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-top) { gap: 8px; flex-wrap: wrap; }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-badge) {
+  min-height: 44px;
+  gap: 6px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+}
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-val) {
+  font: 800 16px/1.4 ui-monospace, "Cascadia Code", "Consolas", monospace;
+  letter-spacing: .04em;
+  color: var(--ink);
+}
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { font-size: 11px; color: var(--sea); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-actions) { gap: 6px; margin-left: auto; }
+:global(.game-screen-wrapper):has(.folder) :global(.header-icon-btn) {
+  width: auto;
+  height: 44px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+}
+:global(.game-screen-wrapper):has(.folder) :global(.header-btn-leave) { color: var(--brick); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-sub) { padding-top: 8px; }
+
+.folder {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  gap: 16px;
+  padding: 22px;
+  background: var(--role-grain), var(--folder);
+  border: 2px solid var(--ink);
+  border-radius: 0 20px 20px 20px;
+  box-shadow: 0 5px 0 var(--soft-shadow);
+}
+.folder::after {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  z-index: 0;
+  border: 1px dashed rgba(111, 102, 82, .3);
+  border-radius: 14px;
+  pointer-events: none;
+}
+.folder > * { position: relative; z-index: 1; }
+.folder .tab {
+  position: absolute;
+  left: -2px;
+  top: -32px;
+  z-index: 2;
+  min-height: 34px;
+  padding: 6px 22px;
+  border: 2px solid var(--ink);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: var(--role-grain), var(--folder);
+  font-size: 12px;
+  font-weight: 800;
+}
+.folder .spine { position: absolute; inset: 14px auto 14px 0; width: 6px; background: rgba(111, 102, 82, .12); z-index: 0; }
+.folder .clip { position: absolute; top: -16px; right: 24px; width: 28px; height: 59px; transform: rotate(9deg); color: var(--ink); z-index: 3; pointer-events: none; }
+
+.folder .header { text-align: left; }
+.metadata { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; padding-right: 30px; }
+.roundStamp { padding: 3px 10px; border: 1px solid rgba(31, 122, 112, .2); background: var(--sea-tint); color: var(--sea); border-radius: 20px; font-size: 12px; font-weight: 800; }
+.classification { font-size: 11px; color: var(--stone); }
+.folder .title { margin: 0 0 6px; font-size: clamp(22px, 5.7vw, 28px); font-weight: 800; line-height: 1.4; color: var(--ink); }
+.folder .caption { margin: 0; font-size: 13px; color: var(--ink-soft); line-height: 1.7; }
+
+.folder .paper {
+  position: relative;
+  padding: 16px 18px;
+  background: var(--role-grain), var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 12px 12px 0 12px;
+  box-shadow: 0 4px 0 rgba(27, 42, 74, .12);
+}
+.paper::before { content: ""; position: absolute; top: -9px; left: 18px; width: 50px; height: 17px; background: var(--role-grain), rgba(247, 224, 143, .8); transform: rotate(-5deg); z-index: 1; pointer-events: none; }
+.folder .paperFold { position: absolute; right: -1px; bottom: -1px; width: 22px; height: 22px; background: linear-gradient(135deg, #E9DFC7 0 48%, var(--folder) 50%); border-top: 1px solid rgba(111, 102, 82, .18); clip-path: polygon(100% 0,100% 100%,0 100%); pointer-events: none; }
+.folder .cardTop { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 0; padding: 0 0 12px; border-bottom: 1px dashed var(--line); }
+.folder .privateStamp { border: 1px solid var(--brick); border-radius: 4px; padding: 2px 8px; background: transparent; color: var(--brick); font-size: 11px; font-weight: 700; letter-spacing: 0; transform: rotate(-3deg); }
+.folder .coverButton { min-height: 44px; height: auto; padding: 6px 12px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--ink-soft); box-shadow: none; font-size: 12px; font-weight: 700; }
+.folder .cardBody { min-height: 206px; padding: 20px 2px 16px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0; }
+.folder .roleBody { width: 100%; padding: 0; text-align: center; }
+.roleKicker { margin: 0 0 8px; font-size: 12px; color: var(--ink-soft); }
+.folder .roleName { position: relative; display: inline-block; isolation: isolate; margin: 0 0 16px; color: var(--ink); font-size: clamp(28px, 7.5vw, 38px); font-weight: 800; line-height: 1.4; }
+.roleName::after { content: ""; position: absolute; z-index: -1; left: -4px; right: -4px; bottom: 3px; height: 10px; background: var(--mustard); border-radius: 4px 2px 5px 3px; transform: rotate(-1deg); }
+.folder .description { margin: 0; padding: 0; border: 0; background: transparent; font-size: 15px; line-height: 1.75; color: var(--ink-soft); }
+.folder .covered { width: 100%; border: 0; border-radius: 0; background: transparent; color: var(--ink); font: inherit; cursor: pointer; }
+.closedFileLabel { margin-bottom: 12px; font-size: 13px; color: var(--ink-soft); }
+.folder .coveredStamp { margin: 0 0 20px; padding: 4px 14px; border: 2px solid var(--brick); border-radius: 4px; color: var(--brick); font: 800 22px/1.5 var(--font-en); letter-spacing: .1em; transform: rotate(-4deg); }
+.redactedLines { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 100%; margin-bottom: 14px; }
+.redactedLines i { display: block; width: 62%; max-width: 185px; height: 10px; background: var(--ink); border-radius: 3px; }
+.redactedLines i:last-child { width: 42%; max-width: 130px; opacity: .7; }
+.folder .coveredHint { margin: 0; color: var(--ink-soft); font-size: 12px; }
+.loading { display: flex; flex-direction: column; align-items: center; gap: 12px; font-size: 14px; color: var(--ink-soft); }
+
+.folder .reminder { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 12px 14px; background: var(--role-grain), #FFF0BB; border: 1px solid rgba(111, 102, 82, .23); border-radius: 3px 10px 10px 10px; box-shadow: 0 2px 0 rgba(111, 102, 82, .12); color: var(--ink); font-size: 12px; line-height: 1.7; }
+.reminder p { margin: 0; }
+.reminderMark { display: flex; align-items: center; justify-content: center; width: 23px; height: 23px; flex: none; margin-top: 2px; border: 1.5px solid var(--brick); border-radius: 50%; color: var(--brick); font: 800 16px/1 var(--font-en); }
+.footer { padding-top: 1px; }
+.folder .acknowledge { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; min-height: 52px; height: auto; padding: 12px 16px; border: 2px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); background: var(--brick); color: var(--paper); font-size: 16px; font-weight: 800; }
+.folder .acknowledge svg { flex: none; }
+.folder .acknowledge:disabled { opacity: 1; background: #EAE1CB; color: var(--stone); box-shadow: 0 3px 0 var(--soft-shadow); cursor: not-allowed; }
+.folder .acknowledge:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.folder .waiting { min-height: 58px; padding: 12px; border: 1.5px dashed var(--sea); border-radius: 12px; background: var(--sea-tint); color: var(--sea); font-size: 13px; line-height: 1.7; }
+.waiting strong { display: block; color: var(--sea); }
+.folder :global(.spinner-dots) { flex: none; }
+.folder :global(.spinner-dots) span { background: var(--sea); }
+
+@media (hover: hover) {
+  .folder .coverButton:hover { background: var(--sea-tint); color: var(--sea); transform: none; }
+  .folder .acknowledge:hover:not(:disabled) { background: #983F28; }
+  .folder .covered:hover .coveredStamp { transform: rotate(-1deg); }
+}
+@media (max-width: 480px) {
+  .folder { padding: 18px 16px; gap: 14px; }
+  .folder .paper { padding: 14px; }
+  .folder .cardBody { min-height: 222px; padding: 18px 0 14px; }
+  :global(.game-screen-wrapper):has(.folder) :global(.room-code-label) { display: none; }
+}
+@media (max-width: 380px) {
+  .folder { padding: 18px 14px; }
+  .folder .paper { padding: 12px; }
+  .folder .cardBody { min-height: 244px; }
+  .classification { display: none; }
+  .folder .reminder { padding: 10px; gap: 8px; }
+  :global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .folder .revealed, .folder .covered { animation: document-in .22s ease-out; }
+  .folder .paper { animation: document-in .3s ease-out; }
+  .folder .coverButton, .folder .acknowledge, .folder .coveredStamp { transition: background-color .15s ease, transform .15s ease; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(.game-screen-wrapper):has(.folder) *, :global(.game-screen-wrapper):has(.folder) *::before, :global(.game-screen-wrapper):has(.folder) *::after { animation: none; transition: none; }
+}
+@keyframes document-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

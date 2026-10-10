@@ -33,6 +33,8 @@ export async function actor(browser: Browser, info: TestInfo): Promise<Actor> {
 }
 export async function enter(player: Actor, name: string, code?: string) {
   await player.page.goto(code ? `/?room=${code}` : '/');
+  // Let profile hydration finish before typing into the restored form.
+  await player.page.waitForFunction(() => localStorage.getItem('wayr.profile') !== null);
   await player.page.fill('#name', name);
   await player.page.locator(`input[value="${code ? 'fox' : 'cat'}"]`).check();
   await player.page.locator(code ? '#btn-join' : '#btn-create').click();

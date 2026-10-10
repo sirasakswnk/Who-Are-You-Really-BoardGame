@@ -1,0 +1,36 @@
+.screen {
+  --missing-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .28 -.115'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 80px);
+  min-height: calc(100dvh - 80px);
+  padding: 48px 10px 20px;
+  color: var(--ink);
+  font-family: var(--font-th);
+}
+.backing { position: relative; isolation: isolate; width: 100%; max-width: 580px; }
+.backing::before { content: ""; position: absolute; inset: 7px -7px -7px 7px; z-index: 0; border: 1.5px solid var(--ink); border-radius: 20px; background: var(--missing-grain), var(--blush); transform: skewY(.6deg); pointer-events: none; }
+.folder { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 20px; padding: 24px; border: 2px solid var(--ink); border-radius: 0 20px 20px 20px; background: var(--missing-grain), var(--folder); box-shadow: 0 5px 0 var(--soft-shadow); }
+.tab { position: absolute; left: -2px; top: -36px; min-height: 38px; padding: 7px 16px; border: 2px solid var(--ink); border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--missing-grain), var(--folder); font-size: 12px; font-weight: 800; }
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.label { color: var(--ink-soft); font: 700 14px/1.6 var(--font-en); }
+.stamp { padding: 3px 10px; border: 1.5px solid var(--brick); border-radius: 4px; background: var(--blush); color: var(--brick); font-size: 12px; font-weight: 700; transform: rotate(-3deg); }
+.paper { position: relative; padding: 20px 18px 24px; border: 1.5px solid var(--ink); border-radius: 12px 12px 0 12px; background: var(--missing-grain), repeating-linear-gradient(0deg, rgba(111, 102, 82, .065) 0 1px, transparent 1px 32px), var(--paper); box-shadow: 0 4px 0 var(--soft-shadow); text-align: center; }
+.paper::before { content: ""; position: absolute; top: -7px; left: 16px; width: 44px; height: 14px; background: var(--missing-grain), rgba(247, 224, 143, .9); transform: rotate(-4deg); pointer-events: none; }
+.paper::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 22px; height: 22px; background: linear-gradient(135deg, #E9DFC7 0 48%, var(--folder) 50%); clip-path: polygon(100% 0, 100% 100%, 0 100%); pointer-events: none; }
+.code { display: block; color: var(--brick); font: 800 clamp(72px, 16vw, 110px)/1.2 var(--font-en); letter-spacing: .06em; text-shadow: 3px 3px 0 var(--blush); }
+.title { margin: 12px 0; color: var(--ink); font-size: 25px; font-weight: 800; line-height: 1.5; text-wrap: balance; }
+.description { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.9; overflow-wrap: anywhere; }
+.home { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 12px 16px; border: 2px solid var(--ink); border-radius: 12px; background: var(--brick); color: var(--paper); box-shadow: 0 4px 0 var(--ink); font-size: 15px; font-weight: 800; line-height: 1.8; text-decoration: none; }
+.home svg { flex: none; }
+.home:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+.home:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.hint { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.8; text-align: center; }
+@media (max-width: 480px) { .folder { gap: 18px; padding: 18px 14px; } .paper { padding: 18px 12px 22px; } .title { font-size: 22px; } .description { font-size: 13px; } .label { font-size: 12px; } .stamp { font-size: 11px; } .home { min-height: 48px; font-size: 14px; } }
+@media (hover: hover) { .home:hover { background: #983F28; } }
+@media (prefers-reduced-motion: no-preference) { .paper { animation: paper-in .24s ease-out; } .home { transition: background-color .15s ease, transform .15s ease; } }
+@media (prefers-reduced-motion: reduce) { .paper, .home { animation: none; transition: none; } }
+@keyframes paper-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

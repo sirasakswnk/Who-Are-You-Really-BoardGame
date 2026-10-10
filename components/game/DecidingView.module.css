@@ -1,0 +1,142 @@
+/* This folder theme applies only while the guessing screen is displayed. */
+:global(.game-screen-wrapper):has(.folder) {
+  --deciding-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .28 -.115'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  --paper-light: var(--paper);
+  --ink-muted: var(--ink-soft);
+  --terracotta: var(--brick);
+  --teal: var(--sea);
+  --line: rgba(27, 42, 74, .22);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --shadow-sm: 0 3px 0 var(--soft-shadow);
+  --shadow-md: 0 5px 0 var(--soft-shadow);
+  --font-heading: var(--font-th);
+  --tr-fast: .15s ease;
+  gap: 10px;
+}
+:global(.game-main-content):has(> .folder) { position: relative; isolation: isolate; min-height: 0; padding: 0; margin-top: 48px; background: transparent; border: 0; box-shadow: none; }
+:global(.game-main-content):has(> .folder)::before { content: ""; position: absolute; inset: 7px -7px -7px 7px; z-index: 0; border: 1.5px solid var(--ink); border-radius: 18px; background: var(--deciding-grain), var(--blush); transform: rotate(.6deg); pointer-events: none; }
+:global(.game-screen-wrapper):has(.folder) > :global(.room-sync-status) { order: 1; padding: 0 10px; color: var(--ink-soft); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+:global(.game-screen-wrapper):has(.folder) > :global(.room-sync-status) p { margin: 3px 0 0; }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header) { position: relative; top: auto; background: var(--deciding-grain), var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; box-shadow: 0 3px 0 rgba(27, 42, 74, .1); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-top) { gap: 8px; flex-wrap: wrap; }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-badge) { min-height: 44px; gap: 6px; padding: 4px; border: 0; background: transparent; }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-val) { font: 800 16px/1.4 ui-monospace, "Cascadia Code", "Consolas", monospace; letter-spacing: .04em; color: var(--ink); }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { font-size: 11px; color: var(--sea); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-actions) { gap: 6px; margin-left: auto; }
+:global(.game-screen-wrapper):has(.folder) :global(.header-icon-btn) { width: auto; height: 44px; padding: 0 9px; border: 1px solid var(--line); border-radius: 9px; background: transparent; font-size: 12px; font-weight: 700; }
+:global(.game-screen-wrapper):has(.folder) :global(.header-btn-leave) { color: var(--brick); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-sub) { padding-top: 8px; }
+
+.folder { position: relative; z-index: 1; isolation: isolate; gap: 18px; padding: 22px; border: 2px solid var(--ink); border-radius: 0 20px 20px 20px; background: var(--deciding-grain), var(--folder); box-shadow: 0 5px 0 var(--soft-shadow); }
+.folder::after { content: ""; position: absolute; inset: 9px; z-index: 0; border: 1px dashed rgba(111, 102, 82, .3); border-radius: 14px; pointer-events: none; }
+.folder > * { position: relative; z-index: 1; }
+.folder .folderTabs { position: absolute; left: -2px; top: -42px; z-index: 2; display: flex; align-items: flex-end; gap: 6px; max-width: calc(100% - 35px); }
+.folderTabs .tab { display: flex; align-items: center; flex: none; min-height: 44px; padding: 8px 16px; border: 2px solid var(--ink); border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--deciding-grain), var(--folder); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.folder .spine { position: absolute; inset: 14px auto 14px 0; width: 6px; background: rgba(111, 102, 82, .12); z-index: 0; }
+.folder .clip { position: absolute; top: -27px; right: 20px; width: 23px; height: 47px; color: var(--ink); transform: rotate(9deg); z-index: 3; pointer-events: none; }
+.folder .header { text-align: left; }
+.metadata { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.clueLabel { padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--deciding-grain), var(--paper); color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
+.analysisStamp { padding: 3px 8px; border: 1.5px solid var(--brick); border-radius: 4px; color: var(--brick); font-size: 11px; font-weight: 700; line-height: 1.6; transform: rotate(-2deg); }
+.folder .title { margin: 16px 0 6px; color: var(--ink); font-size: clamp(20px, 5vw, 24px); font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
+.caption { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
+.folder .points { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 16px; padding: 10px 12px; border: 1px dashed rgba(111, 102, 82, .5); border-radius: 9px; background: var(--deciding-grain), rgba(247, 224, 143, .32); color: var(--ink-soft); font-size: 12px; line-height: 1.8; font-weight: 400; }
+.points strong { color: var(--brick); font-size: 16px; font-weight: 800; }
+.selectionPanel { min-width: 0; }
+.folder .subtitle { display: flex; flex-direction: column; gap: 4px; margin: 0 0 18px; color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
+.subtitle strong { color: var(--ink); font-size: 13px; font-weight: 700; }
+.folder .finalAlert { margin-bottom: 16px; padding: 12px; border: 1.5px solid var(--brick); border-radius: 10px; background: var(--deciding-grain), var(--blush); color: var(--brick); font-size: 12px; line-height: 1.8; }
+.finalAlert strong { display: block; font-size: 14px; }
+
+.folder .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.folder .card { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid rgba(27, 42, 74, .65); border-radius: 12px 12px 4px 12px; background: var(--deciding-grain), var(--paper); box-shadow: 0 3px 0 rgba(27, 42, 74, .1); opacity: 1; transform: none; transition: none; }
+.cardMeta { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 22px; }
+.fileNumber { color: var(--ink-soft); font: 600 10px/1.6 var(--font-th); letter-spacing: .03em; }
+.selectionMark { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid rgba(27, 42, 74, .4); border-radius: 5px; color: var(--paper); font: 800 15px/1 system-ui, sans-serif; }
+.folder .cardHeader { display: block; margin: 0; }
+.folder .name { display: block; color: var(--ink); font-size: 16px; font-weight: 800; line-height: 1.6; overflow-wrap: anywhere; }
+.folder .description, .folder .ownDescription { flex: 1; margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.folder .notes { display: flex; gap: 6px; padding-top: 10px; margin-top: 2px; border-top: 1px dashed var(--line); }
+.folder .noteButton { flex: 1; min-width: 0; min-height: 44px; padding: 6px 4px; border: 1px solid rgba(27, 42, 74, .3); border-radius: 8px; background: transparent; color: var(--ink-soft); font: 700 12px/1.6 var(--font-th); }
+.folder .suspectNoteActive { border-color: var(--brick); background: var(--mustard); color: var(--brick); }
+.folder .clearNoteActive { border-color: var(--stone); background: #EAE1CB; color: var(--stone); }
+.folder .selectionStatus { min-height: 22px; margin: 0; color: var(--ink-soft); font-size: 11px; line-height: 2; text-align: center; font-weight: 400; }
+.folder .card.notedSuspect { border-left: 3px solid var(--brick); }
+.folder .card.notedCleared { border-left: 3px solid var(--stone); background-color: #F3EEDC; }
+.folder .card.selected { border: 1.5px solid var(--sea); background: var(--deciding-grain), var(--sea-tint); box-shadow: 0 0 0 1px var(--sea), 0 3px 0 rgba(31, 122, 112, .18); }
+.selected .selectionMark { border-color: var(--sea); background: var(--sea); }
+.folder .selected .selectionStatus { color: var(--sea); font-weight: 800; }
+.folder .card[aria-disabled="true"] { cursor: default; }
+.folder .card.ownCard { border: 1px dashed rgba(111, 102, 82, .65); background: var(--deciding-grain), #EEE6D2; box-shadow: none; }
+.ownCard > .fileNumber { display: flex; align-items: center; min-height: 22px; color: var(--stone); }
+.folder .ownName { display: block; color: var(--stone); font-size: 16px; font-weight: 700; line-height: 1.6; text-decoration-color: var(--brick); overflow-wrap: anywhere; }
+.folder .ownDescription { color: var(--stone); }
+.folder .selfTag { align-self: flex-start; margin-top: auto; padding: 4px 8px; border: 1.5px solid var(--stone); border-radius: 4px; background: transparent; color: var(--stone); font-size: 11px; line-height: 1.8; transform: rotate(-2deg); }
+.folder .card:focus-visible, .folder button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+
+.footer { padding-top: 2px; }
+.decisionSheet { padding-top: 14px; border-top: 1px dashed var(--line); }
+.chosenRole { margin: 0 0 14px; color: var(--ink-soft); font-size: 12px; line-height: 1.8; text-align: center; overflow-wrap: anywhere; }
+.chosenRole strong { color: var(--sea); font-size: 14px; }
+.folder .buttonRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.buttonRow > :only-child { grid-column: 1 / -1; }
+.folder .primaryButton, .folder .secondaryButton { display: flex; align-items: center; justify-content: center; width: 100%; min-width: 0; min-height: 52px; height: auto; padding: 12px; border: 2px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); font: 800 14px/1.8 var(--font-th); overflow-wrap: anywhere; transform: none; }
+.folder .primaryButton { background: var(--brick); color: var(--paper); }
+.folder .secondaryButton { background: var(--deciding-grain), var(--paper); color: var(--ink); }
+.folder .primaryButton:disabled, .folder .secondaryButton:disabled { opacity: 1; background: #EAE1CB; color: var(--stone); box-shadow: 0 3px 0 var(--soft-shadow); cursor: not-allowed; transform: none; }
+.folder .primaryButton:active:not(:disabled), .folder .secondaryButton:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.folder .waiting { min-height: 78px; padding: 14px; border: 1.5px dashed var(--sea); border-radius: 12px; background: var(--deciding-grain), var(--sea-tint); color: var(--sea); font-size: 12px; line-height: 1.7; }
+.waitingText { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.savedStamp { display: inline-block; padding: 2px 8px; border: 1.5px solid var(--sea); border-radius: 3px; font-size: 12px; font-weight: 700; transform: rotate(-2deg); }
+.folder :global(.spinner-dots) span { background: var(--sea); }
+.folder .lockedPaper { position: relative; margin-top: 8px; padding: 20px 18px; border: 1.5px solid var(--ink); border-radius: 12px 12px 4px 12px; background: var(--deciding-grain), var(--paper); box-shadow: 0 4px 0 rgba(27, 42, 74, .12); text-align: left; }
+.lockedPaper::before { content: ""; position: absolute; top: -9px; left: 20px; width: 54px; height: 17px; background: var(--deciding-grain), rgba(247, 224, 143, .8); transform: rotate(-5deg); pointer-events: none; }
+.lockedStamp { display: inline-block; padding: 3px 8px; border: 1.5px solid var(--sea); border-radius: 4px; color: var(--sea); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
+.folder .lockedBox { display: block; margin: 16px 0 0; }
+.lockedDetails { display: grid; gap: 8px; }
+.folder .lockedTitle { color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.folder .lockedValue { display: flex; flex-direction: column; gap: 4px; color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.lockedValue strong { color: var(--ink); font-size: 22px; font-weight: 800; overflow-wrap: anywhere; }
+.folder .lockedSub { color: var(--stone); font-size: 12px; line-height: 1.7; }
+.lockedHint { margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
+
+.folder .confirmDialog { position: fixed; inset: 0; z-index: auto; margin: auto; width: min(420px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 40px); padding: 0; border: 2px solid var(--ink); border-radius: 16px; background: var(--deciding-grain), var(--folder); color: var(--ink); box-shadow: 5px 7px 0 var(--blush), 0 12px 36px rgba(27, 42, 74, .25); overflow: auto; }
+.confirmDialog::backdrop { background: rgba(27, 42, 74, .65); backdrop-filter: blur(2px); }
+.confirmPaper { padding: 22px; }
+.confirmStamp { display: inline-block; margin-bottom: 16px; padding: 4px 8px; border: 1.5px solid var(--brick); border-radius: 4px; color: var(--brick); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
+.confirmPaper .confirmTitle { margin: 0 0 14px; color: var(--ink); font: 800 20px/1.5 var(--font-th); }
+.confirmPaper .confirmText { margin: 0; padding: 14px; border: 1px dashed var(--line); border-radius: 10px; background: var(--deciding-grain), var(--paper); color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
+.confirmText strong { color: var(--ink); }
+.confirmPaper .confirmWarning { margin: 14px 0 18px; color: var(--brick); font-size: 12px; font-weight: 600; line-height: 1.8; }
+.confirmPaper .confirmActions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+
+@media (max-width: 559px) { .folder .grid, .folder .buttonRow { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) {
+  .folder { gap: 16px; padding: 18px 16px; }
+  .confirmPaper { padding: 18px; }
+  :global(.game-screen-wrapper):has(.folder) :global(.room-code-label) { display: none; }
+}
+@media (max-width: 380px) {
+  .folder { padding: 18px 14px; }
+  .folderTabs .tab { padding-inline: 12px; }
+  .folder .clip { right: 14px; top: -29px; height: 43px; width: 21px; }
+  .folder .card { padding: 12px; }
+  .folder .waiting { padding: 12px; gap: 8px; }
+  :global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { display: none; }
+}
+@media (max-height: 480px) { .confirmPaper { padding: 14px 18px; } .confirmStamp { margin-bottom: 10px; } }
+@media (hover: hover) {
+  .folder .card:not([aria-disabled="true"]):not(.selected):hover { border-color: var(--sea); }
+  .folder .primaryButton:hover:not(:disabled) { background: #983F28; }
+  .folder .secondaryButton:hover:not(:disabled) { background: var(--deciding-grain), var(--mustard); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card, .lockedPaper { animation: paper-in .24s ease-out; }
+  .folder .primaryButton, .folder .secondaryButton { transition: background-color .15s ease, transform .15s ease; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(.game-screen-wrapper):has(.folder) *, :global(.game-screen-wrapper):has(.folder) *::before, :global(.game-screen-wrapper):has(.folder) *::after { animation: none; transition: none; }
+}
+@keyframes paper-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

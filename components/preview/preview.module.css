@@ -1,0 +1,70 @@
+.root {
+  position: relative;
+  z-index: 2;
+}
+
+.toolbar {
+  max-width: 900px;
+  margin: 0 auto 24px;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  border-radius: 14px;
+  box-shadow: 0 4px 0 var(--soft-shadow);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker { display: none; }
+.summary > span:first-child { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.summary strong { font-family: var(--font-en); font-size: 20px; }
+.badge { background: var(--sea-tint); color: var(--sea); border-radius: 20px; padding: 2px 9px; font-size: 11px; font-weight: 700; }
+.foldHint { font-size: 12px; color: var(--ink-soft); text-align: right; }
+
+.controls { padding: 0 16px 16px; border-top: 1px dashed var(--soft-shadow); }
+.description { margin: 12px 0; font-size: 13px; color: var(--ink-soft); }
+.controlGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.controlGrid label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; font-weight: 700; }
+.controlGrid select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 7px 9px;
+  background: var(--paper);
+  border: 1.5px solid var(--ink);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.controlGrid select:disabled { background: #F0EBDF; color: var(--stone); cursor: default; }
+
+.toolActions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; margin-top: 14px; }
+.toolActions > span { font-size: 12px; color: var(--ink-soft); }
+.toolButton { background: var(--ink); color: var(--paper); padding: 8px 14px; border: 0; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700; }
+.toolButton:hover { background: var(--sea); }
+.gameFrame { min-height: 0; }
+.notice { padding: 10px 14px; border: 1px dashed var(--sea); background: var(--sea-tint); font-size: 13px; border-radius: 8px; }
+
+@media (max-width: 600px) {
+  .controlGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .controlGrid label:first-child, .controlGrid label:nth-child(4) { grid-column: 1 / -1; }
+  .summary { padding: 10px 12px; }
+  .summary strong { font-size: 18px; }
+  .controls { padding: 0 12px 12px; }
+  .foldHint { max-width: 104px; }
+}
+
+@media (max-width: 360px) {
+  .summary > span:first-child { gap: 4px; }
+  .controlGrid { grid-template-columns: minmax(0, 1fr); }
+}

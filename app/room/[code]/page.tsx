@@ -4,6 +4,7 @@ import AvatarSprite from '@/components/AvatarSprite';
 import DeskSprite from '@/components/DeskSprite';
 import DeskScene from '@/components/DeskScene';
 import GameContainer from '@/components/game/GameContainer';
+import { RoomLoadingView } from '@/components/game/RoomAccessViews';
 
 interface RoomPageProps {
   params: Promise<{ code: string }>;
@@ -37,16 +38,9 @@ export default function RoomPage({ params }: RoomPageProps) {
       <DeskScene />
 
       {/* Game App Container with Suspense boundary for Next.js 16 prerendering */}
-      <Suspense
-        fallback={
-          <div className="detective-loading" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-heading)' }}>
-            กำลังเปิดแฟ้มคดี...
-          </div>
-        }
-      >
+      <Suspense fallback={<RoomLoadingView />}>
         <RoomContent params={params} />
       </Suspense>
     </>
   );
 }
-

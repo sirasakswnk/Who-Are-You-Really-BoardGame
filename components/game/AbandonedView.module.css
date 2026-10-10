@@ -1,0 +1,88 @@
+/* Keep the terminated mission report within its own screen. */
+:global(.game-screen-wrapper):has(.folder) {
+  --abandoned-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .28 -.115'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  --paper-light: var(--paper);
+  --ink-muted: var(--ink-soft);
+  --terracotta: var(--brick);
+  --teal: var(--sea);
+  --line: rgba(27, 42, 74, .22);
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --shadow-sm: 0 3px 0 var(--soft-shadow);
+  --shadow-md: 0 5px 0 var(--soft-shadow);
+  --font-heading: var(--font-th);
+  --tr-fast: .15s ease;
+  gap: 10px;
+}
+:global(.game-main-content):has(> .folder) { position: relative; isolation: isolate; min-height: 0; padding: 0; margin-top: 48px; background: transparent; border: 0; box-shadow: none; }
+:global(.game-main-content):has(> .folder)::before { content: ""; position: absolute; inset: 7px -7px -7px 7px; z-index: 0; border: 1.5px solid var(--ink); border-radius: 18px; background: var(--abandoned-grain), var(--blush); transform: skewY(.6deg); pointer-events: none; }
+:global(.game-screen-wrapper):has(.folder) > :global(.room-sync-status) { order: 1; padding: 0 10px; color: var(--ink-soft); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+:global(.game-screen-wrapper):has(.folder) > :global(.room-sync-status) p { margin: 3px 0 0; }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header) { position: relative; top: auto; background: var(--abandoned-grain), var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 8px 10px; box-shadow: 0 3px 0 rgba(27, 42, 74, .1); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-top) { gap: 8px; flex-wrap: wrap; }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-badge) { min-height: 44px; gap: 6px; padding: 4px; border: 0; background: transparent; }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-val) { font: 800 16px/1.4 ui-monospace, "Cascadia Code", "Consolas", monospace; letter-spacing: .04em; color: var(--ink); }
+:global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { font-size: 11px; color: var(--sea); }
+:global(.game-screen-wrapper):has(.folder) :global(.game-header-actions) { gap: 6px; margin-left: auto; }
+:global(.game-screen-wrapper):has(.folder) :global(.header-icon-btn) { width: auto; height: 44px; padding: 0 9px; border: 1px solid var(--line); border-radius: 9px; background: transparent; font-size: 12px; font-weight: 700; }
+:global(.game-screen-wrapper):has(.folder) :global(.header-btn-leave) { color: var(--brick); }
+
+.folder { position: relative; z-index: 1; isolation: isolate; display: flex; flex-direction: column; gap: 20px; padding: 22px; border: 2px solid var(--ink); border-radius: 0 20px 20px 20px; background: var(--abandoned-grain), var(--folder); box-shadow: 0 5px 0 var(--soft-shadow); }
+.folder::after { content: ""; position: absolute; inset: 9px; z-index: 0; border: 1px dashed rgba(111, 102, 82, .3); border-radius: 14px; pointer-events: none; }
+.folder > * { position: relative; z-index: 1; }
+.folder .tab { position: absolute; left: -2px; top: -42px; z-index: 2; display: flex; align-items: center; min-height: 44px; padding: 8px 16px; border: 2px solid var(--ink); border-bottom: 0; border-radius: 14px 14px 0 0; background: var(--abandoned-grain), var(--folder); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.folder .spine { position: absolute; inset: 14px auto 14px 0; width: 6px; background: rgba(111, 102, 82, .12); z-index: 0; }
+.folder .clip { position: absolute; top: -27px; right: 20px; width: 23px; height: 47px; color: var(--ink); transform: rotate(9deg); z-index: 3; pointer-events: none; }
+.header { min-width: 0; }
+.metadata { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.reportLabel { color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
+.stamp { padding: 3px 8px; border: 1.5px solid var(--brick); border-radius: 4px; background: var(--abandoned-grain), rgba(245, 205, 191, .4); color: var(--brick); font-size: 11px; font-weight: 700; line-height: 1.6; transform: rotate(-2deg); }
+.headingRow { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.seal { flex: none; width: 54px; height: 54px; color: var(--brick); transform: rotate(-8deg); }
+.title { min-width: 0; margin: 0; color: var(--ink); font-size: 26px; font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
+
+.report { position: relative; min-width: 0; padding: 18px 16px 22px; border: 1.5px solid var(--ink); border-radius: 12px 12px 0 12px; background: var(--abandoned-grain), repeating-linear-gradient(0deg, rgba(111, 102, 82, .065) 0 1px, transparent 1px 32px), var(--paper); box-shadow: 0 4px 0 rgba(27, 42, 74, .12); }
+.report::before { content: ""; position: absolute; top: -8px; left: 18px; width: 40px; height: 14px; background: var(--abandoned-grain), rgba(247, 224, 143, .85); transform: rotate(-5deg); pointer-events: none; }
+.report::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 19px; height: 19px; background: linear-gradient(135deg, #E9DFC7 0 48%, var(--folder) 50%); clip-path: polygon(100% 0, 100% 100%, 0 100%); pointer-events: none; }
+.reportTitle { margin: 0 0 10px; color: var(--ink-soft); font-size: 12px; font-weight: 700; line-height: 1.7; }
+.message { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; }
+.message strong { background: linear-gradient(transparent 60%, var(--mustard) 60% 90%, transparent 90%); font-weight: 800; }
+.footer { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.nextStep { margin: 0; padding: 10px 12px; border: 1px dashed var(--sea); border-radius: 9px; background: var(--abandoned-grain), var(--sea-tint); color: #19675E; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
+.leave { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 52px; padding: 12px 14px; border: 2px solid var(--ink); border-radius: 12px; background: var(--brick); color: var(--paper); box-shadow: 0 4px 0 var(--ink); font-family: var(--font-th); font-size: 15px; font-weight: 800; line-height: 1.8; cursor: pointer; }
+.leave span { min-width: 0; overflow-wrap: anywhere; }
+.leave svg { flex: none; }
+.leave:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.leave:disabled { opacity: 1; background: #EAE1CB; color: var(--stone); box-shadow: 0 3px 0 var(--soft-shadow); cursor: not-allowed; transform: none; }
+.leave:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+
+@media (max-width: 559px) {
+  .folder { gap: 16px; padding: 18px 16px; }
+  .headingRow { gap: 10px; margin-top: 10px; }
+  .seal { width: 44px; height: 44px; }
+  .title { font-size: 23px; }
+  .report { padding: 16px 12px 20px; }
+  .message { font-size: 14px; }
+  .leave { padding: 10px 12px; font-size: 14px; }
+}
+@media (max-width: 480px) {
+  :global(.game-screen-wrapper):has(.folder) :global(.room-code-label) { display: none; }
+}
+@media (max-width: 380px) {
+  .folder { padding: 16px 14px; }
+  .folder .tab { padding-inline: 12px; }
+  .folder .clip { right: 14px; top: -29px; height: 43px; width: 21px; }
+  .title { font-size: 21px; }
+  .leave { padding-inline: 10px; gap: 8px; }
+  :global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { display: none; }
+}
+@media (hover: hover) { .leave:hover:not(:disabled) { background: #983F28; } }
+@media (prefers-reduced-motion: no-preference) {
+  .report { animation: paper-in .24s ease-out; }
+  .leave { transition: background-color .15s ease, transform .15s ease; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :global(.game-screen-wrapper):has(.folder) *, :global(.game-screen-wrapper):has(.folder) *::before, :global(.game-screen-wrapper):has(.folder) *::after { animation: none; transition: none; }
+}
+@keyframes paper-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

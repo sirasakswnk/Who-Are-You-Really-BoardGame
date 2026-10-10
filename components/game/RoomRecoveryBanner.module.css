@@ -1,0 +1,36 @@
+/* A compact report inside the current game, with no changes to recovery conditions. */
+.banner:global(.room-recovery-banner) {
+  --recovery-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 .36 0 0 0 0 .28 0 0 0 0 .16 0 0 0 .28 -.115'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grain)'/%3E%3C/svg%3E");
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  min-width: 0;
+  margin: 4px 0;
+  padding: 16px 18px 18px;
+  border: 1.5px solid var(--ink);
+  border-left: 5px solid var(--brick);
+  border-radius: 12px 12px 3px 12px;
+  background: var(--recovery-grain), var(--folder);
+  color: var(--ink);
+  box-shadow: 0 4px 0 var(--soft-shadow);
+  font-family: var(--font-th);
+  text-align: left;
+}
+.banner::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 18px; height: 18px; background: linear-gradient(135deg, #DACDB0 0 48%, var(--desk) 50%); clip-path: polygon(100% 0, 100% 100%, 0 100%); pointer-events: none; }
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.label { color: var(--ink-soft); font-size: 11px; font-weight: 700; line-height: 1.8; }
+.stamp { padding: 2px 8px; border: 1px solid var(--brick); border-radius: 3px; background: var(--blush); color: var(--brick); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
+.title { margin: 10px 0 8px; font-size: 17px; font-weight: 800; line-height: 1.6; text-wrap: balance; }
+.messages { min-width: 0; padding: 10px 12px; border: 1px dashed rgba(27, 42, 74, .3); border-radius: 8px; background: var(--recovery-grain), var(--paper); }
+.banner .messages > p { margin: 0; font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.banner .messages > p + p { margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(27, 42, 74, .2); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.banner.banner .actions > button { flex: 1 1 210px; min-width: 0; min-height: 48px; height: auto; padding: 10px 12px; border: 1.5px solid var(--ink); border-radius: 10px; color: var(--ink); background: var(--recovery-grain), var(--paper); box-shadow: 0 3px 0 var(--soft-shadow); font: 700 13px/1.7 var(--font-th); white-space: normal; overflow-wrap: anywhere; cursor: pointer; }
+.banner.banner .actions > :global(.btn-primary) { background: var(--sea); color: var(--paper); box-shadow: 0 3px 0 var(--ink); }
+.banner.banner .actions > button:disabled { background: #EAE1CB; color: var(--stone); opacity: 1; cursor: not-allowed; transform: none; box-shadow: 0 2px 0 var(--soft-shadow); }
+.actions > button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.banner.banner .actions > button:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+@media (max-width: 480px) { .banner:global(.room-recovery-banner) { padding: 14px 12px 16px; } .title { font-size: 16px; } .banner .messages > p { font-size: 13px; } .actions { flex-direction: column; } .banner.banner .actions > button { flex: none; width: 100%; } }
+@media (hover: hover) { .banner.banner .actions > button:hover:not(:disabled) { background: var(--recovery-grain), #F9EED4; } .banner.banner .actions > :global(.btn-primary):hover:not(:disabled) { background: #19675E; } }
+@media (prefers-reduced-motion: no-preference) { .actions > button { transition: background-color .15s ease, transform .15s ease; } }
+@media (prefers-reduced-motion: reduce) { .actions > button { transition: none; } }

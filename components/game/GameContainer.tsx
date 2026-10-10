@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { auth, ensureAnonymousAuth, rtdb } from '@/lib/firebase/client';
 import { ref, onValue } from 'firebase/database';
@@ -19,6 +19,8 @@ import MatchResultView from './MatchResultView';
 import RulesModal from './RulesModal';
 import AbandonedView from './AbandonedView';
 import RoomConnectionStatus from './RoomConnectionStatus';
+import { RoomLoadingView, RoomConnectionErrorView } from './RoomAccessViews';
+import RoomRecoveryBanner from './RoomRecoveryBanner';
 import { RoomPresence, firebasePresence, UNKNOWN_PRESENCE, type PresenceState } from '@/lib/client/roomPresence';
 import { RoundNotes, type SuspicionNotes } from '@/lib/client/roundNotes';
 
@@ -32,6 +34,17 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
   const presenceRef = useRef<RoomPresence | null>(null);
   const notesRef = useRef<RoundNotes | null>(null);
   const [notes, setNotes] = useState<SuspicionNotes>({});
+  const resetExitedRoomOnHideRef = useRef(false);
+
+  /* A cached room must not restore the completed departure UI on the next join. */
+  useLayoutEffect(() => {
+    return () => {
+      if (!resetExitedRoomOnHideRef.current) return;
+      resetExitedRoomOnHideRef.current = false;
+      setSessionState(INITIAL_SESSION);
+      setPresenceState(UNKNOWN_PRESENCE);
+    };
+  }, []);
 
   useEffect(() => {
     let active = true, expired = false;
@@ -113,7 +126,11 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
   }, [roomCode, bootstrapAttempt]);
 
   useEffect(() => {
-    if (sessionState.left) { presenceRef.current?.dispose(); router.replace('/'); }
+    if (sessionState.left) {
+      resetExitedRoomOnHideRef.current = true;
+      presenceRef.current?.dispose();
+      router.replace('/');
+    }
   }, [sessionState.left, router]);
 
   const send = async (action: ClientCommand) => { await sessionRef.current?.submit(action); };
@@ -124,20 +141,14 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
   const leave = () => { void sessionRef.current?.leave(); };
   const snapshot = sessionState.snapshot;
   if (sessionState.loading || (snapshot && snapshot.public.code !== roomCode)) return (
-    <div className="game-loading-screen" role="status">
-      <div className="spinner-dots" aria-hidden="true"><span /><span /><span /></div>
-      <p className="loading-text">กำลังเชื่อมต่อแฟ้มสืบสวน {roomCode}...</p>
-    </div>
+    <RoomLoadingView roomCode={roomCode} />
   );
   if (!snapshot) return (
-    <div className="game-error-screen"><div className="error-box" role="alert">
-      <h2 className="error-title">ยังเชื่อมต่อห้องไม่ได้</h2>
-      <p className="error-message">{sessionState.connectionError || 'กำลังตรวจสถานะห้อง'}</p>
-      <button className="btn btn-primary" onClick={() => void refresh()}>ลองเชื่อมต่อใหม่</button>
-      {sessionState.pending?.envelope.action.type === 'PLAYER_LEAVE' && <button className="btn btn-primary" disabled={sessionState.sending}
+    <RoomConnectionErrorView roomCode={roomCode} message={sessionState.connectionError || 'กำลังตรวจสถานะห้อง'}
+      onRetry={() => void refresh()} onBackToHome={() => router.push('/')}>
+      {sessionState.pending?.envelope.action.type === 'PLAYER_LEAVE' && <button className="btn btn-primary room-pending-leave" disabled={sessionState.sending}
         onClick={() => void sessionRef.current?.retry()}>ลองคำขอออกจากห้องเดิม</button>}
-      <button className="btn btn-secondary" onClick={() => router.push('/')}>กลับสู่หน้าหลัก</button>
-    </div></div>
+    </RoomConnectionErrorView>
   );
   const { public: pub, private: own, seat, isHost } = snapshot;
   const blocked = sessionState.actionBlocked || (pub.phase === 'MATCH_RESULT' && pub.players.some(player => player === null));
@@ -146,6 +157,7 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
     <div className="game-screen-wrapper">
       <GameHeader roomCode={roomCode} phase={pub.phase} roundIndex={pub.roundIndex} clueIndex={pub.clueIndex}
         mySeat={seat} scores={pub.matchScores} leaveBlocked={sessionState.sending || sessionState.left}
+        myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
         onOpenRules={() => setIsRulesOpen(true)} onLeaveRoom={leave} />
       <div className="room-sync-status" role="status" aria-live="polite">
         {sessionState.sending ? 'กำลังบันทึกและยืนยันคำขอ...'
@@ -155,16 +167,15 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
       </div>
       <RoomConnectionStatus presence={presenceState} snapshot={snapshot} />
       {(sessionState.connectionError || sessionState.actionError || (sessionState.pending && !sessionState.sending)) && (
-        <div className="room-recovery-banner" role="alert">
+        <RoomRecoveryBanner actions={<>
+          <button className="btn btn-secondary" disabled={sessionState.sending} onClick={() => void refresh()}>ตรวจสถานะล่าสุด</button>
+          {sessionState.pending && <button className="btn btn-primary" disabled={sessionState.sending}
+            onClick={() => void sessionRef.current?.retry()}>ตรวจและลองคำขอเดิมอีกครั้ง</button>}
+        </>}>
           {sessionState.connectionError && <p>{sessionState.connectionError}</p>}
           {sessionState.actionError && <p>{sessionState.actionError.message}</p>}
           {sessionState.pending && !sessionState.actionError && <p>ยังรอยืนยันคำขอเดิม กรุณาตรวจสถานะก่อนส่งคำขอใหม่</p>}
-          <div className="room-recovery-actions">
-            <button className="btn btn-secondary" disabled={sessionState.sending} onClick={() => void refresh()}>ตรวจสถานะล่าสุด</button>
-            {sessionState.pending && <button className="btn btn-primary" disabled={sessionState.sending}
-              onClick={() => void sessionRef.current?.retry()}>ตรวจและลองคำขอเดิมอีกครั้ง</button>}
-          </div>
-        </div>
+        </RoomRecoveryBanner>
       )}
       <main className="game-main-content" key={viewKey}>
         {pub.phase === 'ABANDONED' && <AbandonedView displayName={pub.termination?.displayName ?? 'คู่เล่น'}
@@ -175,12 +186,15 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
         {pub.phase === 'ROLE_INTRO' && <RoleIntroView myRole={own.role} roundIndex={pub.roundIndex}
           actionBlocked={blocked} hasAcknowledged={own.roleAcknowledged} onAcknowledgeRole={() => send({ type: 'ROLE_ACK' })} />}
         {pub.phase === 'ANSWERING' && <AnsweringView scenario={pub.scenario} clueIndex={pub.clueIndex}
+          myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
           actionBlocked={blocked} myCommittedAnswer={own.committedAnswer} opponentHasAnswered={false}
           onSubmitAnswer={optionId => send({ type: 'SUBMIT_ANSWER', optionId })} />}
         {pub.phase === 'ANSWER_REVEAL' && <AnswerRevealView scenario={pub.scenario} clueIndex={pub.clueIndex}
+          myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
           actionBlocked={blocked} hasAcknowledged={own.revealAcknowledged} mySeat={seat} players={pub.players}
           revealedAnswers={pub.revealedAnswers} evidence={pub.revealedEvidence} onAcknowledgeReveal={() => send({ type: 'REVEAL_ACK' })} />}
         {pub.phase === 'DECIDING' && <DecidingView clueIndex={pub.clueIndex} myRole={own.role}
+          roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
           actionBlocked={blocked} hasSubmitted={own.decisionSubmitted} hasGuessed={own.hasGuessed}
           myGuessedRole={own.guess} myGuessedClueIndex={own.guessClueIndex}
           scratchpad={notes} onToggleNote={(role, tag) => notesRef.current?.toggle(role, tag)}

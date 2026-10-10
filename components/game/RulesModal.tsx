@@ -14,11 +14,15 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
     <div className="rules-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-label="กติกาและบทบาท">
       <div className="rules-modal-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="rules-modal-header">
-          <div className="rules-modal-title">
-            <svg width="20" height="20" aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 8 }}>
-              <use href="#ico-card" />
-            </svg>
-            คู่มือนักสืบ & กติกาการเล่น
+          <div className="rules-modal-heading">
+            <div className="rules-modal-kicker">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <circle cx="10" cy="10" r="6" />
+                <path d="m15 15 6 6M7 10a3 3 0 0 1 3-3" />
+              </svg>
+              <span>WHO ARE YOU REALLY?</span>
+            </div>
+            <h2 className="rules-modal-title">คู่มือนักสืบ & กติกาการเล่น</h2>
           </div>
           <button className="rules-modal-close" onClick={onClose} aria-label="ปิดคู่มือ">
             ✕
@@ -28,7 +32,7 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
         <div className="rules-modal-body">
           {/* Golden Rule */}
           <div className="rules-callout">
-            <div className="rules-callout-icon">💡</div>
+            <div className="rules-callout-icon" aria-hidden="true">!</div>
             <div className="rules-callout-text">
               <strong>กฎข้อสำคัญ:</strong> ตอบตามบทบาทที่ได้รับอย่างเป็นธรรมชาติ อย่าจงใจตอบตรงข้ามเพื่อกันเพื่อนทาย เพราะคะแนนมาจากการจับตัวตนของอีกฝ่ายให้ได้!
             </div>
@@ -36,17 +40,17 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
 
           {/* Scoring Table */}
           <div className="rules-section">
-            <h3 className="rules-section-title">ตารางคะแนนการทาย</h3>
+            <h3 className="rules-section-title"><span className="rules-section-index" aria-hidden="true">01</span>ตารางคะแนนการทาย</h3>
             <div className="rules-scoring-grid">
               {SCORE_TABLE.map((pts, idx) => (
                 <div key={idx} className="rules-score-item">
                   <div className="rules-score-clue">ทายถูกหลังข้อ {idx + 1}</div>
-                  <div className="rules-score-pts">+{pts} คะแนน</div>
+                  <div className="rules-score-pts"><b>+{pts}</b><span>คะแนน</span></div>
                 </div>
               ))}
               <div className="rules-score-item rules-score-wrong">
                 <div className="rules-score-clue">ทายผิด / ไม่ทาย</div>
-                <div className="rules-score-pts">0 คะแนน</div>
+                <div className="rules-score-pts"><b>0</b><span>คะแนน</span></div>
               </div>
             </div>
             <p className="rules-caption">
@@ -56,13 +60,14 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
 
           {/* 6 Roles Catalog */}
           <div className="rules-section">
-            <h3 className="rules-section-title">บทบาททั้ง 6 ในเกม</h3>
+            <h3 className="rules-section-title"><span className="rules-section-index" aria-hidden="true">02</span>บทบาททั้ง 6 ในเกม</h3>
             <div className="rules-roles-list">
-              {ROLE_IDS.map((roleId) => {
+              {ROLE_IDS.map((roleId, idx) => {
                 const info = ROLES[roleId];
                 return (
-                  <div key={roleId} className="rules-role-card">
+                  <div key={roleId} className={`rules-role-card rules-file-${roleId}`}>
                     <div className="rules-role-header">
+                      <span className="rules-role-index" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
                       <span className={`rules-role-badge role-${roleId}`}>{info.name}</span>
                     </div>
                     <div className="rules-role-desc">{info.description}</div>
@@ -74,8 +79,9 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
         </div>
 
         <div className="rules-modal-footer">
-          <button className="btn btn-primary" onClick={onClose} style={{ width: '100%' }}>
-            รับทราบและกลับไปที่เกม
+          <button className="btn rules-return-btn" onClick={onClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg>
+            <span>รับทราบและกลับไปที่เกม</span>
           </button>
         </div>
       </div>

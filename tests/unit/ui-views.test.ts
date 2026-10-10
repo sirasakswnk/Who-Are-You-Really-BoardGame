@@ -191,7 +191,7 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
     const roleInfo = ROLES['saver'];
     expect(html).toContain(roleInfo.name);
     expect(html).toContain(roleInfo.description);
-    expect(html).toContain('เข้าใจบทบาทแล้ว พร้อมตอบคำถาม!');
+    expect(html).toContain('เข้าใจบทบาทแล้ว');
   });
 
   it('renders AnsweringView with active scenario options', () => {
@@ -289,10 +289,10 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
         onBackToHome: () => {},
       })
     );
-    expect(html).toContain('ยินดีด้วย! คุณคือนักสืบยอดเยี่ยม!');
+    expect(html).toContain('คุณชนะ');
     expect(html).toContain('14');
     expect(html).toContain('8');
     expect(html).toContain('สรุปผลการสืบสวนทั้ง 4 รอบ');
-    expect(html).toContain('ขอเล่นอีกรอบ (Rematch)');
+    expect(html).toContain('เล่นอีกครั้ง');
   });
 });

@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { RoleId, ROLES } from '@/lib/game/types';
+import { useId, useState } from 'react';
+import { RoleId, ROLES, ROUNDS_PER_MATCH } from '@/lib/game/types';
+import styles from './RoleIntroView.module.css';
 
 interface RoleIntroViewProps {
   actionBlocked?: boolean;
@@ -20,6 +21,7 @@ export default function RoleIntroView({
 }: RoleIntroViewProps) {
   const [isCovered, setIsCovered] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const documentId = useId();
 
   const roleInfo = myRole ? ROLES[myRole] : null;
 
@@ -34,84 +36,95 @@ export default function RoleIntroView({
   };
 
   return (
-    <div className="role-intro-container">
-      {/* Round Header */}
-      <div className="role-intro-header">
-        <span className="case-stamp">รอบที่ {roundIndex + 1} — แฟ้มลับเฉพาะบุคคล</span>
-        <h2 className="role-intro-title">บทบาทลับของคุณในรอบนี้</h2>
-        <p className="role-intro-caption">
+    <section className={`role-intro-container ${styles.folder}`} aria-labelledby={`${documentId}-title`}>
+      <span className={`role-folder-tab ${styles.tab}`} aria-hidden="true">บทบาทลับ</span>
+      <span className={styles.spine} aria-hidden="true" />
+      <svg className={`role-file-clip ${styles.clip}`} viewBox="0 0 32 68" aria-hidden="true" focusable="false">
+        <path d="M10 47V14a8 8 0 0 1 16 0v36a11 11 0 0 1-22 0V21a5 5 0 0 1 10 0v29a2 2 0 0 1-4 0" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" />
+      </svg>
+
+      <header className={`role-intro-header ${styles.header}`}>
+        <div className={styles.metadata}>
+          <span className={styles.roundStamp}>รอบที่ {roundIndex + 1} / {ROUNDS_PER_MATCH}</span>
+          <span className={styles.classification}>เอกสารเฉพาะบุคคล</span>
+        </div>
+        <h2 className={`role-intro-title ${styles.title}`} id={`${documentId}-title`}>แฟ้มภารกิจลับของคุณ</h2>
+        <p className={`role-intro-caption ${styles.caption}`}>
           จำลองพฤติกรรมตามบทบาทนี้ในการตอบสถานการณ์ทั้ง 4 ข้อ
         </p>
-      </div>
+      </header>
 
-      {/* Secret File Card */}
-      <div className="secret-file-card">
-        {/* Cover Toggle Button */}
-        <div className="file-cover-toggle-row">
+      <div className={`secret-file-card ${styles.paper}`}>
+        <div className={`secret-card-top ${styles.cardTop}`}>
+          <span className={`secret-badge ${styles.privateStamp}`}>เฉพาะคุณ</span>
           <button
-            className="btn btn-secondary btn-sm cover-toggle-btn"
+            type="button"
+            className={`btn btn-secondary btn-sm cover-toggle-btn ${styles.coverButton}`}
             onClick={() => setIsCovered(!isCovered)}
             aria-label={isCovered ? 'เปิดดูบทบาท' : 'ซ่อนบทบาท'}
+            aria-expanded={!isCovered}
+            aria-controls={`${documentId}-details`}
           >
-            {isCovered ? '👁️ แตะเพื่อเปิดดูบทบาท' : '🙈 แตะเพื่อซ่อน (ป้องกันคนแอบดู)'}
+            {isCovered ? 'เปิดดูบทบาท' : 'ซ่อนบทบาท'}
           </button>
         </div>
 
         {isCovered ? (
-          <div className="secret-card-covered" onClick={() => setIsCovered(false)}>
-            <div className="covered-stamp">TOP SECRET</div>
-            <p className="covered-hint">บทบาทถูกซ่อนไว้ แตะตรงนี้เพื่อเปิดดู</p>
-          </div>
+          <button type="button" className={`secret-card-covered ${styles.cardBody} ${styles.covered}`}
+            id={`${documentId}-details`} onClick={() => setIsCovered(false)} aria-label="เปิดดูบทบาทที่ซ่อนไว้">
+            <span className={styles.closedFileLabel}>ปิดแฟ้มลับไว้แล้ว</span>
+            <span className={`covered-stamp ${styles.coveredStamp}`}>TOP SECRET</span>
+            <span className={styles.redactedLines} aria-hidden="true"><i /><i /></span>
+            <span className={`covered-hint ${styles.coveredHint}`}>แตะเพื่อเปิดดูบทบาทอีกครั้ง</span>
+          </button>
         ) : (
-          <div className="secret-card-content">
-            <div className="secret-card-top">
-              <span className="secret-badge">CONFIDENTIAL</span>
-              <span className="secret-round-tag">ROUND {roundIndex + 1}</span>
-            </div>
-
+          <div className={`secret-card-content ${styles.cardBody} ${styles.revealed}`} id={`${documentId}-details`}>
             {roleInfo ? (
-              <div className="secret-role-body">
-                <div className={`secret-role-name role-${roleInfo.id}`}>
+              <div className={`secret-role-body ${styles.roleBody}`}>
+                <p className={styles.roleKicker}>ตัวตนของคุณในรอบนี้</p>
+                <h3 className={`secret-role-name role-${roleInfo.id} ${styles.roleName}`}>
                   {roleInfo.name}
-                </div>
-                <div className="secret-role-id">Role ID: #{roleInfo.id}</div>
-                <p className="secret-role-desc">{roleInfo.description}</p>
+                </h3>
+                <p className={`secret-role-desc ${styles.description}`}>{roleInfo.description}</p>
               </div>
             ) : (
-              <div className="secret-role-loading">กำลังแจกบทบาท...</div>
+              <div className={styles.loading} role="status">
+                <div className="spinner-dots" aria-hidden="true"><span /><span /><span /></div>
+                <span>กำลังแจกบทบาท...</span>
+              </div>
             )}
-
-            {/* Golden Rule Warning */}
-            <div className="secret-golden-rule">
-              <span className="golden-icon">⚠️</span>
-              <span>
-                <strong>คำเตือน:</strong> ตอบตามบทบาทอย่างเป็นธรรมชาติ
-                ห้ามจงใจตอบสลับเพื่อกันเพื่อนเดา เพราะเพื่อนก็พยายามจับทางคุณอยู่!
-              </span>
-            </div>
           </div>
         )}
+        <span className={styles.paperFold} aria-hidden="true" />
       </div>
 
-      {/* Action Footer */}
-      <div className="role-intro-footer">
+      <div className={`secret-golden-rule ${styles.reminder}`}>
+        <span className={styles.reminderMark} aria-hidden="true">!</span>
+        <p><strong>ข้อควรจำ:</strong> ตอบตามบทบาทอย่างเป็นธรรมชาติ
+          ห้ามจงใจตอบสลับเพื่อกันเพื่อนเดา เพราะเพื่อนก็พยายามจับทางคุณอยู่!</p>
+      </div>
+
+      <footer className={`role-intro-footer ${styles.footer}`}>
         {hasAcknowledged ? (
-          <div className="waiting-opponent-banner">
+          <div className={`waiting-opponent-banner ${styles.waiting}`} role="status" aria-live="polite">
             <div className="spinner-dots" aria-hidden="true">
               <span /><span /><span />
             </div>
-            <span>คุณพร้อมแล้ว! กำลังรออีกฝ่ายพร้อมไปต่อ...</span>
+            <span><strong>คุณพร้อมแล้ว!</strong> กำลังรออีกฝ่ายพร้อมไปต่อ...</span>
           </div>
         ) : (
           <button
-            className="btn btn-primary btn-lg acknowledge-role-btn"
+            type="button"
+            className={`btn btn-primary btn-lg acknowledge-role-btn ${styles.acknowledge}`}
             onClick={handleAcknowledge}
             disabled={!myRole || isSubmitting || actionBlocked}
           >
-            {isSubmitting ? 'กำลังบันทึก...' : 'เข้าใจบทบาทแล้ว พร้อมตอบคำถาม! ➔'}
+            <span>{isSubmitting ? 'กำลังบันทึก...' : 'เข้าใจบทบาทแล้ว'}</span>
+            {!isSubmitting && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6" /></svg>}
           </button>
         )}
-      </div>
-    </div>
+      </footer>
+    </section>
   );
 }

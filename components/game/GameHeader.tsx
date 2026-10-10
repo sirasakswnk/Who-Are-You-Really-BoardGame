@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { GamePhase, ROUNDS_PER_MATCH, CLUES_PER_ROUND } from '@/lib/game/types';
+import { GamePhase, ROUNDS_PER_MATCH, CLUES_PER_ROUND, type RoleId } from '@/lib/game/types';
+import RoleReminder from './RoleReminder';
+import LeaveRoomDialog from './LeaveRoomDialog';
 
 interface GameHeaderProps {
   roomCode: string;
@@ -13,6 +15,9 @@ interface GameHeaderProps {
   onOpenRules: () => void;
   onLeaveRoom: () => void;
   leaveBlocked?: boolean;
+  myRole?: RoleId | null;
+  roleAcknowledged?: boolean;
+  roleContextKey?: string;
 }
 
 export default function GameHeader({
@@ -25,6 +30,9 @@ export default function GameHeader({
   onOpenRules,
   onLeaveRoom,
   leaveBlocked = false,
+  myRole = null,
+  roleAcknowledged = false,
+  roleContextKey,
 }: GameHeaderProps) {
   const [showConfirmLeave, setShowConfirmLeave] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -49,6 +57,9 @@ export default function GameHeader({
     phase === 'ANSWER_REVEAL' ||
     phase === 'DECIDING' ||
     phase === 'ROUND_REVEAL';
+  const usesTextControls = phase === 'LOBBY' || phase === 'ROLE_INTRO' || phase === 'ANSWERING' || phase === 'ANSWER_REVEAL' || phase === 'DECIDING' || phase === 'ROUND_REVEAL' || phase === 'MATCH_RESULT' || phase === 'ABANDONED';
+  const canViewRole = myRole !== null && roleAcknowledged &&
+    phase === 'ROLE_INTRO';
 
   return (
     <header className="game-header">
@@ -62,18 +73,21 @@ export default function GameHeader({
         >
           <span className="room-code-label">รหัสห้อง:</span>
           <span className="room-code-val">{roomCode}</span>
-          <span className="room-code-copy-icon">{copied ? '✓' : '📋'}</span>
+          <span className="room-code-copy-icon">{usesTextControls ? (copied ? 'คัดลอกแล้ว' : 'คัดลอก') : (copied ? '✓' : '📋')}</span>
         </button>
 
         {/* Action Controls */}
         <div className="game-header-actions">
+          {canViewRole && myRole && (
+            <RoleReminder key={`${roleContextKey ?? `${roomCode}:${roundIndex}`}:${myRole}`} role={myRole} />
+          )}
           <button
             className="header-icon-btn"
             onClick={onOpenRules}
             title="ดูกติกาและบทบาท"
             aria-label="กติกา"
           >
-            📖
+            {usesTextControls ? 'คู่มือ' : '📖'}
           </button>
           <button
             className="header-icon-btn header-btn-leave"
@@ -82,7 +96,7 @@ export default function GameHeader({
             title="ออกจากห้อง"
             aria-label="ออกจากห้อง"
           >
-            🚪
+            {usesTextControls ? 'ออกจากห้อง' : '🚪'}
           </button>
         </div>
       </div>
@@ -116,31 +130,25 @@ export default function GameHeader({
 
       {/* Leave Confirmation Dialog */}
       {showConfirmLeave && (
-        <div className="confirm-modal-backdrop" onClick={() => setShowConfirmLeave(false)}>
-          <div className="confirm-modal-box" onClick={(e) => e.stopPropagation()}>
-            <h3 className="confirm-modal-title">ออกจากห้อง?</h3>
-            <p className="confirm-modal-text">
-              {phase === 'LOBBY' ? 'ที่นั่งของคุณจะว่าง และโอนเจ้าห้องให้ผู้เล่นที่เหลือ'
-                : phase === 'ABANDONED' || phase === 'MATCH_RESULT' ? 'ออกจากห้องนี้และกลับหน้าหลัก'
-                : 'หากออกจากห้อง เกมนี้จะยุติและไม่มีผู้ชนะเต็มเกม'}
-            </p>
-            <div className="confirm-modal-actions">
-              <button className="btn btn-secondary" onClick={() => setShowConfirmLeave(false)}>
-                ยกเลิก
-              </button>
-              <button
-                className="btn btn-danger"
-                disabled={leaveBlocked}
-                onClick={() => {
-                  setShowConfirmLeave(false);
-                  if (!leaveBlocked) onLeaveRoom();
-                }}
-              >
-                ออกจากห้อง
-              </button>
-            </div>
-          </div>
-        </div>
+        <LeaveRoomDialog onClose={() => setShowConfirmLeave(false)}
+          description={phase === 'LOBBY' ? 'ที่นั่งของคุณจะว่าง และโอนเจ้าห้องให้ผู้เล่นที่เหลือ'
+            : phase === 'ABANDONED' || phase === 'MATCH_RESULT' ? 'ออกจากห้องนี้และกลับหน้าหลัก'
+            : 'หากออกจากห้อง เกมนี้จะยุติและไม่มีผู้ชนะเต็มเกม'}>
+          <button type="button" className="btn btn-secondary" onClick={() => setShowConfirmLeave(false)}>
+            ยกเลิก
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            disabled={leaveBlocked}
+            onClick={() => {
+              setShowConfirmLeave(false);
+              if (!leaveBlocked) onLeaveRoom();
+            }}
+          >
+            ออกจากห้อง
+          </button>
+        </LeaveRoomDialog>
       )}
     </header>
   );
