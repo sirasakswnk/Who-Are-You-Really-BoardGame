@@ -75,7 +75,7 @@ export default function GamePreview({ scenarios }: { scenarios: Scenario[] }) {
   const fixedOptions = isHome || isRoomAccess || isUtility;
   const availableStates = isHome ? HOME_STATES : phase === 'ROOM_LOADING' ? ROOM_LOADING_STATES : phase === 'ROOM_ERROR' ? ROOM_ERROR_STATES
     : phase === 'ROOM_RECOVERY' ? ROOM_RECOVERY_STATES : phase === 'LEAVE_CONFIRM' ? LEAVE_CONFIRM_STATES : phase === 'NOT_FOUND' ? NOT_FOUND_STATES : STATES;
-  const role = ROLE_IDS.find(id => id === searchParams.get('role')) ?? 'explorer';
+  const role = ROLE_IDS.find(id => id === searchParams.get('role')) ?? 'alien';
   const state = availableStates.find(item => item.value === searchParams.get('state'))?.value ?? 'active';
   const roundIndex = readIndex(searchParams.get('round'));
   const clueIndex = readIndex(searchParams.get('clue'));
@@ -217,6 +217,7 @@ function PreviewScreen({ options, scenarios }: { options: PreviewOptions; scenar
             actionBlocked={blocked} hasAcknowledged={own.revealAcknowledged} mySeat={seat} players={pub.players}
             revealedAnswers={pub.revealedAnswers} evidence={pub.revealedEvidence} onAcknowledgeReveal={acknowledge} />}
           {pub.phase === 'DECIDING' && <DecidingView clueIndex={pub.clueIndex} myRole={own.role}
+            mySeat={seat} evidence={pub.revealedEvidence}
             roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
             actionBlocked={blocked} hasSubmitted={own.decisionSubmitted} hasGuessed={own.hasGuessed}
             myGuessedRole={own.guess} myGuessedClueIndex={own.guessClueIndex}

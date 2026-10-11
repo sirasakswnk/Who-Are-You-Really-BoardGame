@@ -41,56 +41,110 @@
 .clueLabel { padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--deciding-grain), var(--paper); color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
 .analysisStamp { padding: 3px 8px; border: 1.5px solid var(--brick); border-radius: 4px; color: var(--brick); font-size: 11px; font-weight: 700; line-height: 1.6; transform: rotate(-2deg); }
 .folder .title { margin: 16px 0 6px; color: var(--ink); font-size: clamp(20px, 5vw, 24px); font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
-.caption { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
-.folder .points { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 16px; padding: 10px 12px; border: 1px dashed rgba(111, 102, 82, .5); border-radius: 9px; background: var(--deciding-grain), rgba(247, 224, 143, .32); color: var(--ink-soft); font-size: 12px; line-height: 1.8; font-weight: 400; }
-.points strong { color: var(--brick); font-size: 16px; font-weight: 800; }
+.evidenceReview { min-width: 0; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px 10px 4px 10px; background: var(--deciding-grain), var(--paper); }
+.reviewHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.reviewTitle { margin: 0; color: var(--ink-soft); font-size: 12px; font-weight: 700; line-height: 1.7; }
+.reviewClue { padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink-soft); font-size: 11px; white-space: nowrap; }
+.reviewAnswer { margin-top: 8px; padding: 9px 12px; border-left: 3px solid var(--sea); border-radius: 0 7px 7px 0; background: var(--sea-tint); }
+.reviewAnswerText { margin: 0; color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.65; overflow-wrap: anywhere; }
+.questionToggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; min-width: 44px; margin-top: 2px; padding: 6px 2px; border: 0; background: transparent; color: var(--sea); font: 700 12px/1.7 var(--font-th); cursor: pointer; }
+.reviewQuestion { padding-top: 8px; border-top: 1px dashed var(--line); }
+.reviewPrompt, .reviewEmpty { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.reviewEmpty { margin-top: 8px; }
 .selectionPanel { min-width: 0; }
-.folder .subtitle { display: flex; flex-direction: column; gap: 4px; margin: 0 0 18px; color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
-.subtitle strong { color: var(--ink); font-size: 13px; font-weight: 700; }
-.folder .finalAlert { margin-bottom: 16px; padding: 12px; border: 1.5px solid var(--brick); border-radius: 10px; background: var(--deciding-grain), var(--blush); color: var(--brick); font-size: 12px; line-height: 1.8; }
-.finalAlert strong { display: block; font-size: 14px; }
-
-.folder .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-.folder .card { position: relative; min-width: 0; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid rgba(27, 42, 74, .65); border-radius: 12px 12px 4px 12px; background: var(--deciding-grain), var(--paper); box-shadow: 0 3px 0 rgba(27, 42, 74, .1); opacity: 1; transform: none; transition: none; }
-.cardMeta { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 22px; }
-.fileNumber { color: var(--ink-soft); font: 600 10px/1.6 var(--font-th); letter-spacing: .03em; }
-.selectionMark { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border: 1px solid rgba(27, 42, 74, .4); border-radius: 5px; color: var(--paper); font: 800 15px/1 system-ui, sans-serif; }
-.folder .cardHeader { display: block; margin: 0; }
-.folder .name { display: block; color: var(--ink); font-size: 16px; font-weight: 800; line-height: 1.6; overflow-wrap: anywhere; }
-.folder .description, .folder .ownDescription { flex: 1; margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
-.folder .notes { display: flex; gap: 6px; padding-top: 10px; margin-top: 2px; border-top: 1px dashed var(--line); }
-.folder .noteButton { flex: 1; min-width: 0; min-height: 44px; padding: 6px 4px; border: 1px solid rgba(27, 42, 74, .3); border-radius: 8px; background: transparent; color: var(--ink-soft); font: 700 12px/1.6 var(--font-th); }
-.folder .suspectNoteActive { border-color: var(--brick); background: var(--mustard); color: var(--brick); }
-.folder .clearNoteActive { border-color: var(--stone); background: #EAE1CB; color: var(--stone); }
-.folder .selectionStatus { min-height: 22px; margin: 0; color: var(--ink-soft); font-size: 11px; line-height: 2; text-align: center; font-weight: 400; }
-.folder .card.notedSuspect { border-left: 3px solid var(--brick); }
-.folder .card.notedCleared { border-left: 3px solid var(--stone); background-color: #F3EEDC; }
-.folder .card.selected { border: 1.5px solid var(--sea); background: var(--deciding-grain), var(--sea-tint); box-shadow: 0 0 0 1px var(--sea), 0 3px 0 rgba(31, 122, 112, .18); }
-.selected .selectionMark { border-color: var(--sea); background: var(--sea); }
-.folder .selected .selectionStatus { color: var(--sea); font-weight: 800; }
-.folder .card[aria-disabled="true"] { cursor: default; }
-.folder .card.ownCard { border: 1px dashed rgba(111, 102, 82, .65); background: var(--deciding-grain), #EEE6D2; box-shadow: none; }
-.ownCard > .fileNumber { display: flex; align-items: center; min-height: 22px; color: var(--stone); }
-.folder .ownName { display: block; color: var(--stone); font-size: 16px; font-weight: 700; line-height: 1.6; text-decoration-color: var(--brick); overflow-wrap: anywhere; }
-.folder .ownDescription { color: var(--stone); }
-.folder .selfTag { align-self: flex-start; margin-top: auto; padding: 4px 8px; border: 1.5px solid var(--stone); border-radius: 4px; background: transparent; color: var(--stone); font-size: 11px; line-height: 1.8; transform: rotate(-2deg); }
-.folder .card:focus-visible, .folder button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
-
-.footer { padding-top: 2px; }
-.decisionSheet { padding-top: 14px; border-top: 1px dashed var(--line); }
-.chosenRole { margin: 0 0 14px; color: var(--ink-soft); font-size: 12px; line-height: 1.8; text-align: center; overflow-wrap: anywhere; }
+.folder .subtitle { margin: 0 0 12px; color: var(--ink-soft); font-size: 12px; font-weight: 700; line-height: 1.8; }
+.folder .finalAlert { margin-bottom: 12px; padding: 10px; border: 1px solid var(--brick); border-radius: 9px; background: var(--blush); color: var(--brick); font-size: 12px; line-height: 1.8; }
+.finalAlert strong { font-size: 13px; }
+.roleLoading { display: grid; place-items: center; gap: 10px; min-height: 140px; padding: 18px; border: 1px dashed var(--line); border-radius: 10px; background: var(--paper); text-align: center; color: var(--ink-soft); font-size: 14px; }
+.roleLoading p { margin: 0; }
+.folder .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.folder .card { --identity-accent: #304563; --identity-tint: #E3E7ED; position: relative; min-width: 0; padding: 0; overflow: visible; border: 1.5px solid var(--ink); border-left: 4px solid var(--identity-accent); border-radius: 12px; background: var(--deciding-grain), var(--paper); box-shadow: 2px 3px 0 rgba(27,42,74,.12); opacity: 1; transform: none; cursor: default; }
+.folder .identity_alien { --identity-accent: #27786B; --identity-tint: #D8EEE4; }
+.folder .identity_spy { --identity-accent: #304563; --identity-tint: #DEE4EF; }
+.folder .identity_vampire { --identity-accent: #A44738; --identity-tint: #F7DED5; }
+.folder .identity_time_traveler { --identity-accent: #94701D; --identity-tint: #F8EABA; }
+.folder .identity_thief { --identity-accent: #74548C; --identity-tint: #ECE1F2; }
+.folder .identity_ghost { --identity-accent: #407993; --identity-tint: #DCECF2; }
+.radio { position: absolute; left: 12px; top: 12px; width: 1px; height: 1px; margin: 0; opacity: 0; }
+.cardMain { display: grid; grid-template-columns: 72px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 82px; padding: 10px 10px 0; cursor: pointer; }
+.portrait { width: 72px; border: 1px solid rgba(27,42,74,.15); color: var(--ink); }
+.cardCopy { min-width: 0; }
+.nameLine { display: flex; align-items: start; gap: 6px; }
+.folder .name { flex: 1; min-width: 0; color: var(--ink); font-size: 18px; font-weight: 800; line-height: 1.45; overflow-wrap: anywhere; }
+.selectionMark { display: grid; place-items: center; flex: none; width: 19px; height: 19px; margin-top: 3px; border: 1px solid var(--identity-accent); border-radius: 50%; color: transparent; background: var(--paper); font: 800 12px/1 system-ui, sans-serif; }
+.folder .description { margin: 4px 0 0; color: var(--ink-soft); font-size: 14px; line-height: 1.65; overflow-wrap: anywhere; }
+.cardTools { display: flex; justify-content: space-between; align-items: center; gap: 6px; min-height: 44px; padding: 0 10px 5px; }
+.badges { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; }
+.selectedBadge, .noteBadge { display: inline-block; padding: 2px 6px; border: 1px solid currentColor; border-radius: 5px; font-size: 11px; font-weight: 700; line-height: 1.7; }
+.selectedBadge { color: var(--sea); background: var(--sea-tint); }
+.suspectBadge { color: var(--brick); background: var(--mustard); }
+.clearedBadge { color: var(--stone); background: #EEE9DA; }
+.detailsButton, .closeDetails { flex: none; min-width: 44px; min-height: 44px; padding: 6px 9px; border: 0; border-radius: 8px; background: transparent; color: var(--identity-accent, var(--sea)); font: 700 12px/1.7 var(--font-th); cursor: pointer; }
+.folder .card.selected { border-color: var(--sea); border-left-color: var(--identity-accent); background: var(--deciding-grain), var(--identity-tint); box-shadow: 0 0 0 2px var(--sea), 2px 3px 0 rgba(31,122,112,.15); }
+.selected .selectionMark { background: var(--sea); border-color: var(--sea); color: var(--paper); }
+.radio:disabled + .cardMain { cursor: default; }
+.card:has(.radio:focus-visible) { outline: 3px solid var(--ink); outline-offset: 4px; }
+.folder button:focus-visible, .detailsBody:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.folder .footer { display: flex; flex-direction: column; gap: 5px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--deciding-grain), var(--paper); }
+.chosenRole { margin: 0; color: var(--ink-soft); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .chosenRole strong { color: var(--sea); font-size: 14px; }
-.folder .buttonRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.points { margin: 0 0 5px; color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
+.folder .buttonRow { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: 10px; }
 .buttonRow > :only-child { grid-column: 1 / -1; }
-.folder .primaryButton, .folder .secondaryButton { display: flex; align-items: center; justify-content: center; width: 100%; min-width: 0; min-height: 52px; height: auto; padding: 12px; border: 2px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); font: 800 14px/1.8 var(--font-th); overflow-wrap: anywhere; transform: none; }
+.folder .primaryButton, .folder .secondaryButton { display: flex; align-items: center; justify-content: center; width: 100%; min-width: 44px; min-height: 48px; height: auto; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; box-shadow: 0 3px 0 var(--ink); font: 800 14px/1.7 var(--font-th); overflow-wrap: anywhere; transform: none; }
 .folder .primaryButton { background: var(--brick); color: var(--paper); }
-.folder .secondaryButton { background: var(--deciding-grain), var(--paper); color: var(--ink); }
-.folder .primaryButton:disabled, .folder .secondaryButton:disabled { opacity: 1; background: #EAE1CB; color: var(--stone); box-shadow: 0 3px 0 var(--soft-shadow); cursor: not-allowed; transform: none; }
-.folder .primaryButton:active:not(:disabled), .folder .secondaryButton:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
-.folder .waiting { min-height: 78px; padding: 14px; border: 1.5px dashed var(--sea); border-radius: 12px; background: var(--deciding-grain), var(--sea-tint); color: var(--sea); font-size: 12px; line-height: 1.7; }
-.waitingText { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-.savedStamp { display: inline-block; padding: 2px 8px; border: 1.5px solid var(--sea); border-radius: 3px; font-size: 12px; font-weight: 700; transform: rotate(-2deg); }
+.folder .secondaryButton { background: var(--paper); color: var(--ink); }
+.folder .primaryButton:disabled, .folder .secondaryButton:disabled { opacity: 1; background: #EAE1CB; color: var(--stone); box-shadow: 0 2px 0 var(--soft-shadow); cursor: not-allowed; transform: none; }
+.folder .waiting { display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 54px; padding: 8px; border: 0; background: transparent; color: var(--sea); font-size: 14px; line-height: 1.7; }
 .folder :global(.spinner-dots) span { background: var(--sea); }
+.submissionError { margin: 0; color: var(--brick); font-size: 12px; line-height: 1.7; }
+.folder .detailsDialog, .folder .confirmDialog { position: fixed; inset: 0; z-index: auto; margin: auto; width: min(480px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 32px); padding: 0; border: 2px solid var(--ink); border-radius: 16px; background: var(--deciding-grain), var(--paper); color: var(--ink); box-shadow: 0 12px 36px rgba(27,42,74,.25); overflow: auto; }
+.detailsDialog::backdrop, .confirmDialog::backdrop { background: rgba(27,42,74,.65); backdrop-filter: blur(2px); }
+.folder .detailsDialog { --sheet-height: min(720px, calc(100dvh - 32px)); max-height: var(--sheet-height); overflow: hidden; }
+.detailsSheet { display: flex; flex-direction: column; max-height: calc(var(--sheet-height) - 4px); }
+.detailsHeader { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 14px; border-bottom: 1px dashed var(--line); background: var(--deciding-grain), var(--folder); }
+.closeDetails { color: var(--ink); border: 1px solid var(--line); background: var(--paper); }
+.detailsBody { min-height: 0; padding: 16px 20px; overflow: auto; overscroll-behavior: contain; }
+.detailsPortrait { width: 140px; margin: 0 auto 12px; }
+.detailsTitle { margin: 0 0 12px; color: var(--ink); font-size: 24px; font-weight: 800; line-height: 1.5; text-align: center; overflow-wrap: anywhere; }
+.fullDescription { margin: 0; color: var(--ink-soft); font-size: 15px; line-height: 1.85; overflow-wrap: anywhere; }
+.detailsNotes { flex: none; padding: 10px 16px 14px; border-top: 1px dashed var(--line); background: var(--deciding-grain), var(--folder); }
+.detailsNotes p { margin: 0 0 8px; color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.noteActions { display: flex; gap: 8px; }
+.folder .noteButton { flex: 1; min-width: 44px; min-height: 44px; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); color: var(--ink-soft); font: 700 14px/1.6 var(--font-th); cursor: pointer; }
+.folder .suspectNoteActive { border-color: var(--brick); color: var(--brick); background: var(--mustard); }
+.folder .clearNoteActive { border-color: var(--stone); color: var(--stone); background: #EAE1CB; }
+.confirmPaper { padding: 20px; }
+.confirmStamp { display: inline-block; margin-bottom: 12px; padding: 3px 8px; border: 1.5px solid var(--brick); border-radius: 4px; color: var(--brick); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
+.confirmPaper .confirmTitle { margin: 0 0 12px; color: var(--ink); font: 800 20px/1.5 var(--font-th); }
+.confirmPaper .confirmText { margin: 0; padding: 12px; border: 1px dashed var(--line); border-radius: 9px; color: var(--ink-soft); font-size: 14px; line-height: 1.8; }
+.confirmText strong { color: var(--ink); }
+.confirmPaper .confirmWarning { margin: 12px 0 16px; color: var(--brick); font-size: 13px; line-height: 1.7; }
+.confirmPaper .confirmActions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (max-width: 559px) {
+  /* The static header must sit below this screen's fixed decision controls. */
+  :global(.game-main-content):has(> .folder) { z-index: 2; }
+  :global(.game-screen-wrapper):has(.folder) :global(.game-header) { z-index: 1; }
+  .folder { gap: 14px; padding: 16px 12px calc(var(--decision-footer-height, 0px) + 20px); }
+  .folder .grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .card { scroll-margin-block: 12px calc(var(--decision-footer-height, 0px) + 16px); }
+  .folder .footer { position: fixed; inset: auto auto 0 50%; z-index: 10; width: min(580px, calc(100% - 32px)); transform: translateX(-50%); padding: 9px 12px calc(10px + env(safe-area-inset-bottom, 0px)); border: 2px solid var(--ink); border-bottom: 0; border-radius: 14px 14px 0 0; box-shadow: 0 -4px 14px rgba(27,42,74,.15); }
+  .folder .detailsDialog { --sheet-height: min(760px, calc(100dvh - 16px - env(safe-area-inset-top, 0px))); inset: auto 0 0; width: 100%; margin: 0 auto; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .detailsNotes { padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+}
+@media (max-width: 480px) { :global(.game-screen-wrapper):has(.folder) :global(.room-code-label) { display: none; } }
+@media (max-width: 380px) {
+  .folderTabs .tab { padding-inline: 12px; }
+  .folder .clip { right: 14px; height: 43px; width: 21px; }
+  .cardMain { grid-template-columns: 64px minmax(0, 1fr); gap: 8px; }
+  .portrait { width: 64px; }
+}
+@media (max-height: 480px) { .confirmPaper { padding: 14px; } .confirmStamp { margin-bottom: 8px; } .detailsPortrait { width: 100px; } }
+@media (hover: hover) { .detailsButton:hover, .closeDetails:hover { background: var(--identity-tint, var(--sea-tint)); } .folder .primaryButton:hover:not(:disabled) { background: #983F28; } }
+@media (prefers-reduced-motion: no-preference) { .folder .card { transition: border-color .15s ease, background-color .15s ease; } .detailsDialog[open] { animation: sheet-in .18s ease-out; } }
+@media (prefers-reduced-motion: reduce) { :global(.game-screen-wrapper):has(.folder) *, :global(.game-screen-wrapper):has(.folder) *::before, :global(.game-screen-wrapper):has(.folder) *::after { animation: none; transition: none; scroll-behavior: auto; } }
+@keyframes sheet-in { from { opacity: 0; } to { opacity: 1; } }
+
 .folder .lockedPaper { position: relative; margin-top: 8px; padding: 20px 18px; border: 1.5px solid var(--ink); border-radius: 12px 12px 4px 12px; background: var(--deciding-grain), var(--paper); box-shadow: 0 4px 0 rgba(27, 42, 74, .12); text-align: left; }
 .lockedPaper::before { content: ""; position: absolute; top: -9px; left: 20px; width: 54px; height: 17px; background: var(--deciding-grain), rgba(247, 224, 143, .8); transform: rotate(-5deg); pointer-events: none; }
 .lockedStamp { display: inline-block; padding: 3px 8px; border: 1.5px solid var(--sea); border-radius: 4px; color: var(--sea); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
@@ -101,42 +155,3 @@
 .lockedValue strong { color: var(--ink); font-size: 22px; font-weight: 800; overflow-wrap: anywhere; }
 .folder .lockedSub { color: var(--stone); font-size: 12px; line-height: 1.7; }
 .lockedHint { margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed var(--line); color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
-
-.folder .confirmDialog { position: fixed; inset: 0; z-index: auto; margin: auto; width: min(420px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 40px); padding: 0; border: 2px solid var(--ink); border-radius: 16px; background: var(--deciding-grain), var(--folder); color: var(--ink); box-shadow: 5px 7px 0 var(--blush), 0 12px 36px rgba(27, 42, 74, .25); overflow: auto; }
-.confirmDialog::backdrop { background: rgba(27, 42, 74, .65); backdrop-filter: blur(2px); }
-.confirmPaper { padding: 22px; }
-.confirmStamp { display: inline-block; margin-bottom: 16px; padding: 4px 8px; border: 1.5px solid var(--brick); border-radius: 4px; color: var(--brick); font-size: 11px; font-weight: 700; transform: rotate(-2deg); }
-.confirmPaper .confirmTitle { margin: 0 0 14px; color: var(--ink); font: 800 20px/1.5 var(--font-th); }
-.confirmPaper .confirmText { margin: 0; padding: 14px; border: 1px dashed var(--line); border-radius: 10px; background: var(--deciding-grain), var(--paper); color: var(--ink-soft); font-size: 13px; line-height: 1.8; }
-.confirmText strong { color: var(--ink); }
-.confirmPaper .confirmWarning { margin: 14px 0 18px; color: var(--brick); font-size: 12px; font-weight: 600; line-height: 1.8; }
-.confirmPaper .confirmActions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
-
-@media (max-width: 559px) { .folder .grid, .folder .buttonRow { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 480px) {
-  .folder { gap: 16px; padding: 18px 16px; }
-  .confirmPaper { padding: 18px; }
-  :global(.game-screen-wrapper):has(.folder) :global(.room-code-label) { display: none; }
-}
-@media (max-width: 380px) {
-  .folder { padding: 18px 14px; }
-  .folderTabs .tab { padding-inline: 12px; }
-  .folder .clip { right: 14px; top: -29px; height: 43px; width: 21px; }
-  .folder .card { padding: 12px; }
-  .folder .waiting { padding: 12px; gap: 8px; }
-  :global(.game-screen-wrapper):has(.folder) :global(.room-code-copy-icon) { display: none; }
-}
-@media (max-height: 480px) { .confirmPaper { padding: 14px 18px; } .confirmStamp { margin-bottom: 10px; } }
-@media (hover: hover) {
-  .folder .card:not([aria-disabled="true"]):not(.selected):hover { border-color: var(--sea); }
-  .folder .primaryButton:hover:not(:disabled) { background: #983F28; }
-  .folder .secondaryButton:hover:not(:disabled) { background: var(--deciding-grain), var(--mustard); }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .card, .lockedPaper { animation: paper-in .24s ease-out; }
-  .folder .primaryButton, .folder .secondaryButton { transition: background-color .15s ease, transform .15s ease; }
-}
-@media (prefers-reduced-motion: reduce) {
-  :global(.game-screen-wrapper):has(.folder) *, :global(.game-screen-wrapper):has(.folder) *::before, :global(.game-screen-wrapper):has(.folder) *::after { animation: none; transition: none; }
-}
-@keyframes paper-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }

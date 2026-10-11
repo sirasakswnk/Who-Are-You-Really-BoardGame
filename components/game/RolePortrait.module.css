@@ -1,0 +1,10 @@
+.portrait {
+  display: block;
+  flex: none;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 10px;
+}

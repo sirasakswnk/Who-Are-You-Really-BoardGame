@@ -1,5 +1,5 @@
 import { ROLE_IDS } from '../../lib/game/types';
-import { ROLES } from '../../lib/game/types';
+import { getRoleInfo } from '../../lib/game/types';
 import { test, expect, phase, click, both, start, guess, reload } from './fixtures';
 
 test('four asymmetric rounds, wrong/forced guesses, reload every phase, history and two-player rematch', async ({ duo }, info) => {
@@ -13,7 +13,7 @@ test('four asymmetric rounds, wrong/forced guesses, reload every phase, history 
     const before = await duo.room(), roleHost = before.private[host.uid()].role!, roleGuest = before.private[guest.uid()].role!;
     expect(roleHost).not.toBe(roleGuest);
     await Promise.all([host, guest].map(async (player, seat) => {
-      await expect(player.page.locator('.secret-role-name')).toHaveText(ROLES[seat === 0 ? roleHost : roleGuest].name);
+      await expect(player.page.locator('.secret-role-name')).toContainText(getRoleInfo(seat === 0 ? roleHost : roleGuest).name);
     }));
     await both(duo, '.acknowledge-role-btn');
     for (let c = 0; c <= Math.max(...timings[r]); c++) {
@@ -53,10 +53,13 @@ test('four asymmetric rounds, wrong/forced guesses, reload every phase, history 
   await phase(duo, 'MATCH_RESULT'); await reloadBoth('.match-result-container');
   const completed = await duo.room(); expect(completed.public.matchScores).toEqual([14, 11]);
   expect(completed.public.roundHistory).toHaveLength(4);
-  await expect(host.page.locator('.breakdown-table tbody tr')).toHaveCount(4);
-  await expect(host.page.locator('details.round-breakdown-card')).toHaveCount(4);
-  await expect(host.page.locator('.result-final-score')).toContainText('14');
-  await expect(host.page.locator('.result-final-score')).toContainText('11');
+  await expect(host.page.locator('details.match-round')).toHaveCount(4);
+  for (const [index, scores] of earned.entries()) {
+    await expect(host.page.locator('details.match-round').nth(index).locator('.match-round-score').nth(0)).toContainText(`+${scores[0]}`);
+    await expect(host.page.locator('details.match-round').nth(index).locator('.match-round-score').nth(1)).toContainText(`+${scores[1]}`);
+  }
+  await expect(host.page.getByRole('region', { name: 'คะแนนรวมทั้งเกม' })).toContainText('14');
+  await expect(host.page.getByRole('region', { name: 'คะแนนรวมทั้งเกม' })).toContainText('11');
   await host.page.screenshot({ path: info.outputPath('match-result.png'), fullPage: true });
   const oldMatch = completed.public.matchId; await click(host, '.rematch-btn');
   expect((await duo.room()).public.phase).toBe('MATCH_RESULT');

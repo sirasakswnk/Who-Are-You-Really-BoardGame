@@ -1,3 +1,4 @@
+import { stateContentVersion } from '../game/types';
 import type { GameState } from '../game/types';
 import { getPlayerProjection } from '../game/engine';
 import type { RoomRecord } from './roomRecord';
@@ -28,6 +29,7 @@ export function buildProjections(
     code,
     phase: state.phase,
     matchId: state.matchId,
+    contentVersion: stateContentVersion(state),
     roundId,
     roundIndex: state.roundIndex,
     clueIndex: state.clueIndex,
@@ -51,6 +53,7 @@ export function buildProjections(
     const own = getPlayerProjection(state, seat);
     privateEntries.push([uid, {
       matchId: state.matchId,
+      contentVersion: stateContentVersion(state),
       roundId,
       phase: state.phase,
       clueIndex: state.clueIndex,

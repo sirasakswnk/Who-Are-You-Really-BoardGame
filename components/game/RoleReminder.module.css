@@ -76,3 +76,5 @@
   .dialog .folder, .trigger, .close { animation: none; transition: none; }
 }
 @keyframes file-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+.portrait { width: 160px; margin: 0 auto 12px; }
+@media (max-height: 450px) { .portrait { width: 100px; } }

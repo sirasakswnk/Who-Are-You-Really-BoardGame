@@ -1,5 +1,5 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto';
-import type { GameAction, Scenario } from '../game/types';
+import { LEGACY_CONTENT_VERSION, stateContentVersion, type GameAction, type Scenario } from '../game/types';
 import { createInitialGameState, processAction } from '../game/engine';
 import { generateRolePair } from '../game/roles';
 import { selectMatchDeck } from './deck';
@@ -75,6 +75,7 @@ export function createRoomService(store: RoomStore, options: {
     await enforceRateLimit(store, uid, lobby ? 'room' : 'game', now);
     // Stable material is prepared once, outside the CAS callback.
     const rolePair = action.type === 'NEXT_ROUND_READY' || action.type === 'START_MATCH' ? roles() : undefined;
+    const legacyRolePair = action.type === 'NEXT_ROUND_READY' ? roles(Math.random, LEGACY_CONTENT_VERSION) : undefined;
     const deck = action.type === 'START_MATCH' ? deckForMatch() : undefined;
     const nextMatchId = action.type === 'REMATCH_REQUEST' ? randomUUID() : undefined;
     const key = createHash('sha256').update(JSON.stringify([uid, actionId])).digest('hex');
@@ -105,7 +106,7 @@ export function createRoomService(store: RoomStore, options: {
       let command: GameAction;
       switch (action.type) {
         case 'START_MATCH': command = { type: 'START_MATCH', rolePair, scenarios: deck![0] }; break;
-        case 'NEXT_ROUND_READY': command = { type: action.type, seat, nextRolePair: rolePair, nextScenarios: room.server.matchDeck?.[state.roundIndex + 1] }; break;
+        case 'NEXT_ROUND_READY': command = { type: action.type, seat, nextRolePair: stateContentVersion(state) === LEGACY_CONTENT_VERSION ? legacyRolePair : rolePair, nextScenarios: room.server.matchDeck?.[state.roundIndex + 1] }; break;
         case 'REMATCH_REQUEST': command = { type: action.type, seat, nextMatchId }; break;
         case 'SUBMIT_ANSWER': case 'REVEAL_ACK': case 'SUBMIT_DECISION': command = { ...action, seat, clueIndex }; break;
         default: command = { ...action, seat };

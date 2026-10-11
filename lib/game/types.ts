@@ -3,23 +3,21 @@
  * Core types for the Who Are You Really? game engine
  */
 
-/** The 6 role identifiers */
-export type RoleId = 'saver' | 'comfort' | 'explorer' | 'companion' | 'impatient' | 'cautious';
+import activeRoles from '../../content/roles.hidden-identities-v1.json';
 
-/** All valid role IDs */
-export const ROLE_IDS: readonly RoleId[] = [
-  'saver', 'comfort', 'explorer', 'companion', 'impatient', 'cautious',
-] as const;
-
-/** Role metadata for display */
-export interface RoleInfo {
-  id: RoleId;
-  name: string;        // Thai display name
-  description: string; // Card description
-}
-
-/** Role catalog */
-export const ROLES: Record<RoleId, RoleInfo> = {
+export const ACTIVE_CONTENT_VERSION = 'hidden-identities-v1' as const;
+export const LEGACY_CONTENT_VERSION = 'personality-v1' as const;
+export type ContentVersion = typeof ACTIVE_CONTENT_VERSION | typeof LEGACY_CONTENT_VERSION;
+export type ActiveRoleId = 'alien' | 'spy' | 'vampire' | 'time_traveler' | 'thief' | 'ghost';
+export type LegacyRoleId = 'saver' | 'comfort' | 'explorer' | 'companion' | 'impatient' | 'cautious';
+/** Union is for decoding persisted matches; new games use ROLE_IDS only. */
+export type RoleId = ActiveRoleId | LegacyRoleId;
+export const ROLE_IDS: readonly ActiveRoleId[] = ['alien', 'spy', 'vampire', 'time_traveler', 'thief', 'ghost'];
+export const LEGACY_ROLE_IDS: readonly LegacyRoleId[] = ['saver', 'comfort', 'explorer', 'companion', 'impatient', 'cautious'];
+export const KNOWN_ROLE_IDS: readonly RoleId[] = [...ROLE_IDS, ...LEGACY_ROLE_IDS];
+export interface RoleInfo { id: RoleId; name: string; description: string; icon?: string }
+export const ROLES = Object.fromEntries(activeRoles.map(role => [role.id, role])) as Record<ActiveRoleId, RoleInfo>;
+export const LEGACY_ROLES: Record<LegacyRoleId, RoleInfo> = {
   saver: {
     id: 'saver',
     name: 'คนประหยัด',
@@ -52,6 +50,24 @@ export const ROLES: Record<RoleId, RoleInfo> = {
   },
 };
 
+export function getRoleInfo(role: RoleId): RoleInfo {
+  return ROLES[role as ActiveRoleId] ?? LEGACY_ROLES[role as LegacyRoleId];
+}
+export function getRoleIds(version: ContentVersion = ACTIVE_CONTENT_VERSION): readonly RoleId[] {
+  return version === LEGACY_CONTENT_VERSION ? LEGACY_ROLE_IDS : ROLE_IDS;
+}
+export function roleContentVersion(role: RoleId): ContentVersion {
+  return LEGACY_ROLE_IDS.includes(role as LegacyRoleId) ? LEGACY_CONTENT_VERSION : ACTIVE_CONTENT_VERSION;
+}
+export function isContentVersion(value: unknown): value is ContentVersion {
+  return value === ACTIVE_CONTENT_VERSION || value === LEGACY_CONTENT_VERSION;
+}
+/** Old records have no version; infer from their existing identities, never rename them. */
+export function stateContentVersion(state: Pick<GameState, 'contentVersion' | 'currentRound' | 'roundHistory'>): ContentVersion {
+  return state.contentVersion ?? (state.currentRound ? roleContentVersion(state.currentRound.roles[0])
+    : state.roundHistory[0] ? roleContentVersion(state.roundHistory[0].roles[0]) : ACTIVE_CONTENT_VERSION);
+}
+
 /** Game phases (state machine states) */
 export type GamePhase =
   | 'LOBBY'
@@ -76,7 +92,7 @@ export interface ScenarioOption {
 }
 
 /** Scenario categories */
-export type ScenarioCategory = 'travel' | 'food' | 'shopping' | 'leisure' | 'friends' | 'daily';
+export type ScenarioCategory = 'social' | 'task' | 'activity' | 'location' | 'reaction' | 'travel' | 'objects' | 'schedule' | 'food' | 'shopping' | 'leisure' | 'friends' | 'daily';
 
 /** A game scenario (client-facing, no editorial metadata) */
 export interface Scenario {
@@ -89,16 +105,18 @@ export interface Scenario {
 
 /** Editorial metadata for scenario creation (server-only) */
 export interface ScenarioEditorial {
-  plausibleOptionsByRole: Record<RoleId, string[]>;
-  rationaleByRole: Record<RoleId, string>;
+  plausibleOptionsByRole: Partial<Record<RoleId, string[]>>;
+  rationaleByRole: Partial<Record<RoleId, string>>;
   difficulty: 'broad' | 'distinguishing';
   tags: string[];
 }
 
 /** Server scenario with editorial metadata */
 export interface ScenarioWithEditorial extends Scenario {
-  editorial: ScenarioEditorial;
+  editorial?: ScenarioEditorial;
 }
+
+export interface LegacyScenarioWithEditorial extends Scenario { editorial: ScenarioEditorial }
 
 /** Player seat assignment */
 export interface PlayerSeat {
@@ -155,6 +173,7 @@ export interface RoundState {
 export interface GameState {
   roomId: string;
   matchId: string;
+  contentVersion?: ContentVersion;
   phase: GamePhase;
   seats: [PlayerSeat | null, PlayerSeat | null];
   roundIndex: number;                                           // 0..3
@@ -183,6 +202,7 @@ export type GameAction =
 export interface PlayerProjection {
   roomId: string;
   matchId: string;
+  contentVersion?: ContentVersion;
   phase: GamePhase;
   mySeat: 0 | 1;
   players: [PlayerSeat | null, PlayerSeat | null];

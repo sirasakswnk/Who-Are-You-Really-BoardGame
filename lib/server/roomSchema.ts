@@ -1,5 +1,5 @@
 import {
-  CLUES_PER_ROUND, ROUNDS_PER_MATCH, ROLE_IDS,
+  CLUES_PER_ROUND, ROUNDS_PER_MATCH, KNOWN_ROLE_IDS, isContentVersion, stateContentVersion, getRoleIds,
   type DecisionAction, type GamePhase, type GameState, type PlayerSeat,
   type RoleId, type RoundResult, type RoundState, type Scenario, type RevealedEvidence,
 } from '../game/types';
@@ -57,7 +57,7 @@ function list<T>(value: unknown, decode: (item: unknown) => T): T[] {
   return keys.map(key => decode(entries[key]));
 }
 function role(value: unknown): RoleId {
-  return ROLE_IDS.includes(value as RoleId) ? value as RoleId : invalid();
+  return KNOWN_ROLE_IDS.includes(value as RoleId) ? value as RoleId : invalid();
 }
 const clue = (value: unknown) => integer(value, 0, CLUES_PER_ROUND - 1);
 const roundIndex = (value: unknown) => integer(value, 0, ROUNDS_PER_MATCH - 1);
@@ -72,7 +72,7 @@ function player(value: unknown): PlayerSeat {
 }
 function scenario(value: unknown): Scenario {
   const item = object(value);
-  const categories = ['travel', 'food', 'shopping', 'leisure', 'friends', 'daily'];
+  const categories = ['social', 'task', 'activity', 'location', 'reaction', 'travel', 'objects', 'schedule', 'food', 'shopping', 'leisure', 'friends', 'daily'];
   if (!categories.includes(text(item.category))) return invalid();
   const options = list(item.options, value => {
     const option = object(value);
@@ -152,6 +152,13 @@ function gameState(value: unknown, code: string): GameState {
       return { seat: integer(ending.seat, 0, 1) as 0 | 1, displayName: text(ending.displayName) };
     }),
   };
+  if (item.contentVersion !== undefined && !isContentVersion(item.contentVersion)) invalid();
+  state.contentVersion = item.contentVersion as GameState['contentVersion'];
+  state.contentVersion = stateContentVersion(state);
+  const catalog = getRoleIds(state.contentVersion);
+  const rounds = [...state.roundHistory, ...(state.currentRound ? [state.currentRound] : [])];
+  if (rounds.some(entry => [...entry.roles, ...entry.guesses].some(role => role !== null && !catalog.includes(role)))) invalid();
+  if (state.currentRound?.currentDecisions.some(decision => decision?.type === 'guess' && !catalog.includes(decision.roleId))) invalid();
   state.seats.forEach((seat, index) => { if (seat && seat.seat !== index) invalid(); });
   if (state.phase === 'LOBBY') {
     if (state.currentRound || state.roundHistory.length || state.roundIndex !== 0 || state.clueIndex !== 0) invalid();

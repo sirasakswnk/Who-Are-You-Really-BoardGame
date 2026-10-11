@@ -1,4 +1,4 @@
-import { ROLE_IDS } from '../game/types';
+import { KNOWN_ROLE_IDS } from '../game/types';
 import type { ActionEnvelope } from '../game/commands';
 
 export type ActionStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -15,7 +15,7 @@ function valid(value: PendingAction, uid: string, code: string): boolean {
     case 'PLAYER_READY': return typeof action.ready === 'boolean';
     case 'SUBMIT_ANSWER': return typeof action.optionId === 'string' && !!action.optionId && action.optionId.length <= 128;
     case 'SUBMIT_DECISION': return !!action.decision && (['continue', 'ack'].includes(action.decision.type) ||
-      (action.decision.type === 'guess' && ROLE_IDS.includes(action.decision.roleId)));
+      (action.decision.type === 'guess' && KNOWN_ROLE_IDS.includes(action.decision.roleId)));
     case 'PLAYER_LEAVE': case 'START_MATCH': case 'ROLE_ACK': case 'REVEAL_ACK': case 'NEXT_ROUND_READY': case 'REMATCH_REQUEST': return true;
     default: return false;
   }

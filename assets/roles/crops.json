@@ -1,0 +1,56 @@
+{
+  "source": "hidden-identities-original.png",
+  "sha256": "0db429df88c826dbf1814ec5d5f9ed2ae51ef1ac9da13645bd5440ac0912a0b8",
+  "sourceSize": [
+    1536,
+    1024
+  ],
+  "outputSize": [
+    512,
+    512
+  ],
+  "contentBox": [
+    480,
+    480
+  ],
+  "padding": 16,
+  "background": "#FCF8EE",
+  "crops": {
+    "alien": {
+      "left": 0,
+      "top": 4,
+      "width": 512,
+      "height": 448
+    },
+    "spy": {
+      "left": 512,
+      "top": 4,
+      "width": 512,
+      "height": 448
+    },
+    "vampire": {
+      "left": 1024,
+      "top": 4,
+      "width": 512,
+      "height": 448
+    },
+    "time_traveler": {
+      "left": 0,
+      "top": 492,
+      "width": 528,
+      "height": 464
+    },
+    "thief": {
+      "left": 528,
+      "top": 492,
+      "width": 496,
+      "height": 464
+    },
+    "ghost": {
+      "left": 1024,
+      "top": 492,
+      "width": 512,
+      "height": 464
+    }
+  }
+}

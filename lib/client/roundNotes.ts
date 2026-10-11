@@ -1,9 +1,9 @@
-import { ROLE_IDS, type RoleId } from '../game/types';
+import { KNOWN_ROLE_IDS, getRoleIds, LEGACY_CONTENT_VERSION, isContentVersion, type ContentVersion, type RoleId } from '../game/types';
 import type { ActionStorage } from './pendingAction';
 
 export type NoteTag = 'suspect' | 'cleared';
 export type SuspicionNotes = Partial<Record<RoleId, NoteTag>>;
-export interface NotesContext { matchId: string; roundId: string | null; revision: number }
+export interface NotesContext { matchId: string; roundId: string | null; revision: number; contentVersion?: ContentVersion }
 interface NotesRecord extends NotesContext { version: 1; uid: string; code: string; notes: SuspicionNotes }
 
 /** One bounded current-round record per actor/room; no old notes, secrets or pending choices. */
@@ -23,11 +23,12 @@ export class RoundNotes {
       if (!data || data.version !== 1 || data.uid !== this.uid || data.code !== this.code ||
           typeof data.matchId !== 'string' || !data.matchId || data.matchId.length > 128 || !(data.roundId === null || (typeof data.roundId === 'string' && data.roundId.length <= 160)) ||
           !Number.isSafeInteger(data.revision) || data.revision < 0 || !data.notes || typeof data.notes !== 'object' || Array.isArray(data.notes) ||
-          Object.entries(data.notes).some(([role, tag]) => !ROLE_IDS.includes(role as RoleId) || !['suspect', 'cleared'].includes(String(tag)))) return null;
+          (data.contentVersion !== undefined && !isContentVersion(data.contentVersion)) ||
+          Object.entries(data.notes).some(([role, tag]) => !KNOWN_ROLE_IDS.includes(role as RoleId) || !getRoleIds(data.contentVersion ?? LEGACY_CONTENT_VERSION).includes(role as RoleId) || !['suspect', 'cleared'].includes(String(tag)))) return null;
       return data;
     } catch { return null; }
   }
-  private same(a: NotesContext, b: NotesContext) { return a.matchId === b.matchId && a.roundId === b.roundId; }
+  private same(a: NotesContext, b: NotesContext) { return (a.contentVersion ?? LEGACY_CONTENT_VERSION) === (b.contentVersion ?? LEGACY_CONTENT_VERSION) && a.matchId === b.matchId && a.roundId === b.roundId; }
   private publish(notes: SuspicionNotes) {
     if (!this.published || JSON.stringify(this.notes) !== JSON.stringify(notes)) { this.published = true; this.notes = notes; this.notify(notes); }
   }
@@ -48,7 +49,7 @@ export class RoundNotes {
   }
   reload() { if (this.context) this.activate(this.context); }
   toggle(role: RoleId, tag: NoteTag) {
-    if (!this.context?.roundId || !ROLE_IDS.includes(role)) return;
+    if (!this.context?.roundId || !getRoleIds(this.context.contentVersion ?? LEGACY_CONTENT_VERSION).includes(role)) return;
     const stored = this.read();
     if (stored && stored.revision >= this.context.revision && !this.same(stored, this.context)) { this.publish({}); return; }
     if (stored && this.same(stored, this.context)) this.context = { ...this.context, revision: Math.max(this.context.revision, stored.revision) };

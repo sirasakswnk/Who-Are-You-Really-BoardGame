@@ -8,7 +8,7 @@ import { POST } from '../../app/api/room/leave/route';
 import type { ClientCommand } from '../../lib/game/commands';
 
 let db: ReturnType<typeof fakeRTDB>;
-const service = () => createRoomService(db.store(), { rolePair: () => ['saver', 'comfort'] });
+const service = () => createRoomService(db.store(), { rolePair: () => ['alien', 'spy'] });
 const record = (code: string) => decodeRoomRecord(db.values.get(`rooms/${code}`), code)!;
 function context(code: string) {
   const view = record(code).public;
@@ -80,8 +80,8 @@ describe('F05 atomic leave, lifecycle and authorization', () => {
     }
     if (phase === 'DECIDING' || phase === 'ROUND_REVEAL') await deciding(code);
     if (phase === 'ROUND_REVEAL') {
-      await command(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'comfort' } });
-      await command(code, 'guest', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'saver' } });
+      await command(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'spy' } });
+      await command(code, 'guest', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'alien' } });
     }
     const before = record(code); expect(before.public.phase).toBe(phase);
     await service().leaveRoom(code, 'host', context(code));
@@ -100,7 +100,7 @@ describe('F05 atomic leave, lifecycle and authorization', () => {
     const code = await answering(), before = record(code), writes = db.roomWrites;
     await service().joinRoom(code, 'guest', 'ชื่อใหม่', 'owl');
     const fresh = await service().getRoomProjections(code, 'guest');
-    expect(fresh.seat).toBe(1); expect(fresh.private.role).toBe('comfort'); expect(record(code)).toEqual(before);
+    expect(fresh.seat).toBe(1); expect(fresh.private.role).toBe('spy'); expect(record(code)).toEqual(before);
     expect(await service().joinRoom(code, 'third', 'สาม', 'owl')).toMatchObject({ success: false });
     expect(db.roomWrites).toBe(writes);
   });
@@ -133,8 +133,8 @@ describe('F05 atomic leave, lifecycle and authorization', () => {
     for (let round = 0; round < 4; round++) {
       await command(code, 'host', { type: 'ROLE_ACK' }); await command(code, 'guest', { type: 'ROLE_ACK' });
       await deciding(code);
-      await command(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'comfort' } });
-      await command(code, 'guest', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'saver' } });
+      await command(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'spy' } });
+      await command(code, 'guest', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'alien' } });
       await command(code, 'host', { type: 'NEXT_ROUND_READY' }); await command(code, 'guest', { type: 'NEXT_ROUND_READY' });
     }
     const before = record(code); expect(before.public.phase).toBe('MATCH_RESULT');

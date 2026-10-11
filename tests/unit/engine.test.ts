@@ -75,11 +75,11 @@ describe('Game Engine State Machine', () => {
       const state = setupTwoPlayerLobby();
       const res = processAction(state, {
         type: 'START_MATCH',
-        rolePair: ['saver', 'comfort'],
+        rolePair: ['alien', 'spy'],
       });
       expect(res.success).toBe(true);
       expect(res.state.phase).toBe('ROLE_INTRO');
-      expect(res.state.currentRound?.roles).toEqual(['saver', 'comfort']);
+      expect(res.state.currentRound?.roles).toEqual(['alien', 'spy']);
     });
   });
 
@@ -88,7 +88,7 @@ describe('Game Engine State Machine', () => {
       let state = setupTwoPlayerLobby();
       state = processAction(state, {
         type: 'START_MATCH',
-        rolePair: ['saver', 'comfort'],
+        rolePair: ['alien', 'spy'],
       }).state;
 
       // Seat 0 acks
@@ -109,7 +109,7 @@ describe('Game Engine State Machine', () => {
       let state = setupTwoPlayerLobby();
       state = processAction(state, {
         type: 'START_MATCH',
-        rolePair: ['saver', 'comfort'],
+        rolePair: ['alien', 'spy'],
       }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 0 }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 1 }).state;
@@ -149,7 +149,7 @@ describe('Game Engine State Machine', () => {
 
     it('requires both players to ack reveal before going to DECIDING', () => {
       let state = setupTwoPlayerLobby();
-      state = processAction(state, { type: 'START_MATCH', rolePair: ['saver', 'comfort'] }).state;
+      state = processAction(state, { type: 'START_MATCH', rolePair: ['alien', 'spy'] }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 0 }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 1 }).state;
       state = processAction(state, { type: 'SUBMIT_ANSWER', seat: 0, clueIndex: 0, optionId: 'opt-a' }).state;
@@ -168,7 +168,7 @@ describe('Game Engine State Machine', () => {
   describe('Decision Barrier & Guess Validation', () => {
     function reachDecidingPhase(clueIndex = 0): GameState {
       let state = setupTwoPlayerLobby();
-      state = processAction(state, { type: 'START_MATCH', rolePair: ['saver', 'comfort'] }).state;
+      state = processAction(state, { type: 'START_MATCH', rolePair: ['alien', 'spy'] }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 0 }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 1 }).state;
       state = processAction(state, { type: 'SUBMIT_ANSWER', seat: 0, clueIndex, optionId: 'opt-a' }).state;
@@ -180,12 +180,12 @@ describe('Game Engine State Machine', () => {
 
     it('disallows guessing own role', () => {
       const state = reachDecidingPhase(0);
-      // P0 role is 'saver'
+      // P0 role is 'alien'
       const res = processAction(state, {
         type: 'SUBMIT_DECISION',
         seat: 0,
         clueIndex: 0,
-        decision: { type: 'guess', roleId: 'saver' },
+        decision: { type: 'guess', roleId: 'alien' },
       });
       expect(res.success).toBe(false);
       expect(res.error).toContain('Cannot guess your own role');
@@ -215,20 +215,20 @@ describe('Game Engine State Machine', () => {
     it('triggers early round reveal when BOTH players have guessed at clue 0', () => {
       let state = reachDecidingPhase(0);
 
-      // P0 guesses 'comfort' (P1's actual role)
+      // P0 guesses 'spy' (P1's actual role)
       state = processAction(state, {
         type: 'SUBMIT_DECISION',
         seat: 0,
         clueIndex: 0,
-        decision: { type: 'guess', roleId: 'comfort' },
+        decision: { type: 'guess', roleId: 'spy' },
       }).state;
 
-      // P1 guesses 'saver' (P0's actual role)
+      // P1 guesses 'alien' (P0's actual role)
       state = processAction(state, {
         type: 'SUBMIT_DECISION',
         seat: 1,
         clueIndex: 0,
-        decision: { type: 'guess', roleId: 'saver' },
+        decision: { type: 'guess', roleId: 'alien' },
       }).state;
 
       // Both guessed -> immediate ROUND_REVEAL!
@@ -245,7 +245,7 @@ describe('Game Engine State Machine', () => {
         type: 'SUBMIT_DECISION',
         seat: 0,
         clueIndex: 0,
-        decision: { type: 'guess', roleId: 'comfort' },
+        decision: { type: 'guess', roleId: 'spy' },
       }).state;
       state = processAction(state, {
         type: 'SUBMIT_DECISION',
@@ -283,7 +283,7 @@ describe('Game Engine State Machine', () => {
         type: 'SUBMIT_DECISION',
         seat: 0,
         clueIndex: 1,
-        decision: { type: 'guess', roleId: 'explorer' },
+        decision: { type: 'guess', roleId: 'vampire' },
       });
       expect(reguessRes.success).toBe(false);
       expect(reguessRes.error).toContain('already guessed; must submit ack');
@@ -338,13 +338,13 @@ describe('Game Engine State Machine', () => {
         type: 'SUBMIT_DECISION',
         seat: 0,
         clueIndex: 3,
-        decision: { type: 'guess', roleId: 'comfort' }, // correct (+2)
+        decision: { type: 'guess', roleId: 'spy' }, // correct (+2)
       }).state;
       state = processAction(state, {
         type: 'SUBMIT_DECISION',
         seat: 1,
         clueIndex: 3,
-        decision: { type: 'guess', roleId: 'explorer' }, // incorrect (0)
+        decision: { type: 'guess', roleId: 'vampire' }, // incorrect (0)
       }).state;
 
       expect(state.phase).toBe('ROUND_REVEAL');
@@ -357,10 +357,10 @@ describe('Game Engine State Machine', () => {
       let state = setupTwoPlayerLobby();
 
       const scriptedRoles: Array<[RoleId, RoleId]> = [
-        ['saver', 'comfort'],
-        ['explorer', 'companion'],
-        ['impatient', 'cautious'],
-        ['comfort', 'saver'],
+        ['alien', 'spy'],
+        ['vampire', 'time_traveler'],
+        ['thief', 'ghost'],
+        ['spy', 'alien'],
       ];
 
       // Round 0
@@ -399,7 +399,7 @@ describe('Game Engine State Machine', () => {
         // P1 guesses wrong role (distinct from both P0 actual role and P1 own role)
         const actualP0Role = state.currentRound!.roles[0];
         const ownP1Role = state.currentRound!.roles[1];
-        const wrongRole = (['saver', 'comfort', 'explorer', 'companion', 'impatient', 'cautious'] as const)
+        const wrongRole = (['alien', 'spy', 'vampire', 'time_traveler', 'thief', 'ghost'] as const)
           .find((r) => r !== actualP0Role && r !== ownP1Role)!;
         state = processAction(state, {
           type: 'SUBMIT_DECISION',
@@ -445,7 +445,7 @@ describe('Game Engine State Machine', () => {
       let state = setupTwoPlayerLobby();
       state = processAction(state, {
         type: 'START_MATCH',
-        rolePair: ['saver', 'comfort'],
+        rolePair: ['alien', 'spy'],
       }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 0 }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 1 }).state;
@@ -462,12 +462,12 @@ describe('Game Engine State Machine', () => {
       const proj1 = getPlayerProjection(state, 1);
 
       // P0 projection checks
-      expect(proj0.myRole).toBe('saver');
+      expect(proj0.myRole).toBe('alien');
       expect(proj0.myCommittedAnswer).toBe('opt-a');
       expect(proj0.opponentHasAnswered).toBe(false);
 
       // P1 projection checks: must NOT know P0 role or P0 answer!
-      expect(proj1.myRole).toBe('comfort');
+      expect(proj1.myRole).toBe('spy');
       expect(proj1.myCommittedAnswer).toBeNull();
       expect(proj1.opponentHasAnswered).toBe(true); // P1 knows P0 answered
       expect(proj1.revealedAnswers).toEqual([]);     // but options are hidden
@@ -475,7 +475,7 @@ describe('Game Engine State Machine', () => {
 
     it('never exposes opponent decision or guess during DECIDING phase', () => {
       let state = setupTwoPlayerLobby();
-      state = processAction(state, { type: 'START_MATCH', rolePair: ['saver', 'comfort'] }).state;
+      state = processAction(state, { type: 'START_MATCH', rolePair: ['alien', 'spy'] }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 0 }).state;
       state = processAction(state, { type: 'ROLE_ACK', seat: 1 }).state;
       state = processAction(state, { type: 'SUBMIT_ANSWER', seat: 0, clueIndex: 0, optionId: 'opt-a' }).state;
@@ -488,7 +488,7 @@ describe('Game Engine State Machine', () => {
         type: 'SUBMIT_DECISION',
         seat: 1,
         clueIndex: 0,
-        decision: { type: 'guess', roleId: 'saver' },
+        decision: { type: 'guess', roleId: 'alien' },
       }).state;
 
       // Check P0's projection: P0 must NOT know whether P1 guessed or continued!

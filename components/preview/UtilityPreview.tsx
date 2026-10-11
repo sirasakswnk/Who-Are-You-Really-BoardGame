@@ -20,7 +20,7 @@ export default function UtilityPreview({ screen, state, scenarios }: {
   const [notice, setNotice] = useState('');
   const [showLeave, setShowLeave] = useState(true);
   const blocked = state === 'blocked';
-  const snapshot = createPreviewSnapshot({ phase: 'ANSWERING', role: 'explorer', state: 'active', roundIndex: 0, clueIndex: 0, seat: 0 }, scenarios,
+  const snapshot = createPreviewSnapshot({ phase: 'ANSWERING', role: 'alien', state: 'active', roundIndex: 0, clueIndex: 0, seat: 0 }, scenarios,
     { submitted: false, answer: null, guess: null, ready: false });
   const { public: pub, private: own } = snapshot;
 

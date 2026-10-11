@@ -1,8 +1,9 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { PlayerSeat, RoundResult, ROLES } from '@/lib/game/types';
+import { PlayerSeat, RoundResult, getRoleInfo } from '@/lib/game/types';
 import { determineMatchWinner } from '@/lib/game/scoring';
+import RolePortrait from './RolePortrait';
 import styles from './MatchResultView.module.css';
 
 interface MatchResultViewProps {
@@ -155,11 +156,14 @@ export default function MatchResultView({
                     <div key={seat} className={`${styles.playerReport} ${seat === mySeat ? styles.myReport : styles.opponentReport}`}>
                       <h3 className={styles.reportName}>{seat === mySeat ? 'คุณ' : 'เพื่อน'} · {players[seat]?.displayName ?? (seat === mySeat ? 'คุณ' : 'เพื่อน')}</h3>
                       <div className={styles.actualRole}>
-                        <span>บทบาทที่ได้รับ</span>
-                        <strong className="match-round-role">{ROLES[round.roles[seat]].name}</strong>
+                        <RolePortrait role={round.roles[seat]} className={styles.portrait} sizes="64px" />
+                        <div className={styles.roleText}>
+                          <span>บทบาทที่ได้รับ</span>
+                          <strong className="match-round-role">{getRoleInfo(round.roles[seat]).name}</strong>
+                        </div>
                       </div>
                       <p className={`match-round-guess ${styles.guess}`}>
-                        {seat === mySeat ? 'คำทายของคุณ' : 'คำทายของเพื่อน'}: {round.guesses[seat] ? ROLES[round.guesses[seat]!].name : 'ไม่ได้ทาย'}
+                        {seat === mySeat ? 'คำทายของคุณ' : 'คำทายของเพื่อน'}: {round.guesses[seat] ? getRoleInfo(round.guesses[seat]!).name : 'ไม่ได้ทาย'}
                         {round.guessClueIndex[seat] !== null && ` หลังข้อที่ ${round.guessClueIndex[seat]! + 1}`}
                       </p>
                       <p className={`match-round-reason ${styles.reason}`}>{round.reason[seat]}</p>

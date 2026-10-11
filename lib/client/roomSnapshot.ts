@@ -1,6 +1,6 @@
 import type { RoomRecord } from '../server/roomRecord';
 import type { ClientCommand, ActionEnvelope } from '../game/commands';
-import { ROLE_IDS } from '../game/types';
+import { KNOWN_ROLE_IDS, isContentVersion, LEGACY_CONTENT_VERSION, getRoleIds } from '../game/types';
 
 export type PublicView = RoomRecord['public'] & { revision: number };
 export type PrivateView = RoomRecord['private'][string] & { revision: number };
@@ -10,7 +10,7 @@ const object = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
 const revision = (value: unknown) => value === undefined ? 0 : Number.isSafeInteger(value) && Number(value) >= 0 ? Number(value) : null;
 function context(value: Record<string, unknown>) {
-  return typeof value.matchId === 'string' && !!value.matchId && typeof value.phase === 'string' && phases.includes(value.phase) &&
+  return (value.contentVersion === undefined || isContentVersion(value.contentVersion)) && typeof value.matchId === 'string' && !!value.matchId && typeof value.phase === 'string' && phases.includes(value.phase) &&
     Number.isInteger(value.clueIndex) && Number(value.clueIndex) >= 0 && Number(value.clueIndex) <= 3 &&
     (typeof value.roundId === 'string' || (value.roundId == null && ['LOBBY', 'CLOSED'].includes(String(value.phase))));
 }
@@ -41,7 +41,7 @@ function summary(value: unknown): RoomRecord['public']['roundSummary'] | undefin
   const roles = tuple<string | null>(item.roles, null);
   const guesses = tuple<string | null>(item.guesses, null), indices = tuple<number | null>(item.guessClueIndex, null);
   const scores = tuple<number>(item.scores, -1), reason = tuple<string>(item.reason, '');
-  if (roles.some(role => !ROLE_IDS.includes(role as typeof ROLE_IDS[number])) || guesses.some(role => role !== null && !ROLE_IDS.includes(role as typeof ROLE_IDS[number])) ||
+  if (roles.some(role => !KNOWN_ROLE_IDS.includes(role as typeof KNOWN_ROLE_IDS[number])) || guesses.some(role => role !== null && !KNOWN_ROLE_IDS.includes(role as typeof KNOWN_ROLE_IDS[number])) ||
       indices.some(index => index !== null && (!Number.isInteger(index) || index < 0 || index > 3)) ||
       scores.some(score => !Number.isSafeInteger(score) || score < 0 || score > 5) || reason.some(text => typeof text !== 'string')) return undefined;
   const details = item.evidence == null ? undefined : evidence(item.evidence);
@@ -69,6 +69,10 @@ export function decodePublic(value: unknown, code: string): PublicView | null {
   if (!details || details.some(entry => entry.clueIndex > Number(data.clueIndex))) return null;
   if (data.roundHistory != null && typeof data.roundHistory !== 'object') return null;
   const history = list(data.roundHistory).map(summary);
+  if (isContentVersion(data.contentVersion)) {
+    const catalog = getRoleIds(data.contentVersion);
+    if ([...history, roundSummary].some(entry => entry && [...entry.roles, ...entry.guesses].some(role => role !== null && !catalog.includes(role)))) return null;
+  }
   const maxHistory = ['ROUND_REVEAL', 'MATCH_RESULT', 'ABANDONED', 'CLOSED'].includes(String(data.phase)) ? Number(data.roundIndex) + 1 : Number(data.roundIndex);
   if (history.length > maxHistory || history.some((entry, index) => !entry || entry.roundIndex !== index)) return null;
   const ending = data.termination == null ? null : object(data.termination);
@@ -85,17 +89,21 @@ export function decodePrivate(value: unknown): PrivateView | null {
   const data = object(value);
   const flags = ['hasGuessed', 'roleAcknowledged', 'answerSubmitted', 'revealAcknowledged', 'decisionSubmitted', 'nextRoundReady', 'rematchRequested'];
   if (!data || !context(data) || revision(data.revision) === null || flags.some(flag => typeof data[flag] !== 'boolean')) return null;
-  if ([data.role, data.guess].some(role => role != null && !ROLE_IDS.includes(role as typeof ROLE_IDS[number])) ||
+  if ([data.role, data.guess].some(role => role != null && !KNOWN_ROLE_IDS.includes(role as typeof KNOWN_ROLE_IDS[number])) ||
       (data.committedAnswer != null && typeof data.committedAnswer !== 'string') ||
       (data.guessClueIndex != null && (!Number.isInteger(data.guessClueIndex) || Number(data.guessClueIndex) < 0 || Number(data.guessClueIndex) > 3))) return null;
+  if (isContentVersion(data.contentVersion)) {
+    const catalog = getRoleIds(data.contentVersion);
+    if ([data.role, data.guess].some(role => role != null && !catalog.includes(role as typeof catalog[number]))) return null;
+  }
   return {
     ...data, revision: revision(data.revision)!, roundId: data.roundId ?? null,
     role: data.role ?? null, guess: data.guess ?? null, guessClueIndex: data.guessClueIndex ?? null,
     committedAnswer: data.committedAnswer ?? null,
   } as PrivateView;
 }
-export function sameContext(a: Pick<PublicView, 'matchId' | 'roundId' | 'phase' | 'clueIndex'>, b: Pick<PrivateView, 'matchId' | 'roundId' | 'phase' | 'clueIndex'>): boolean {
-  return a.matchId === b.matchId && a.roundId === b.roundId && a.phase === b.phase && a.clueIndex === b.clueIndex;
+export function sameContext(a: Pick<PublicView, 'matchId' | 'roundId' | 'phase' | 'clueIndex' | 'contentVersion'>, b: Pick<PrivateView, 'matchId' | 'roundId' | 'phase' | 'clueIndex' | 'contentVersion'>): boolean {
+  return (a.contentVersion ?? LEGACY_CONTENT_VERSION) === (b.contentVersion ?? LEGACY_CONTENT_VERSION) && a.matchId === b.matchId && a.roundId === b.roundId && a.phase === b.phase && a.clueIndex === b.clueIndex;
 }
 
 /** Independent view revisions; never compare or expose the server revision. */

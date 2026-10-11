@@ -110,7 +110,7 @@ describe('F06 real route/engine/CAS history and rematch recovery', () => {
   it('requires both rematch requests, clears every match flag/notes, recovers a lost response and orders multiple tabs', async () => {
     const players = await game(); await finish(players);
     const oldView = structuredClone(players.host.controller.state.snapshot!), oldMatch = oldView.public.matchId;
-    players.host.notes.toggle('comfort', 'suspect');
+    players.host.notes.toggle('spy', 'suspect');
     const pending = tabStorage(), other = client(players.code, 'host', { pending, notesStorage: players.host.notesStorage, loseRematch: true });
     await other.controller.start(); await other.controller.submit({ type: 'REMATCH_REQUEST' });
     expect(other.controller.state.snapshot?.private.rematchRequested).toBe(true); expect(other.controller.state.pending).toBeNull();
@@ -125,7 +125,7 @@ describe('F06 real route/engine/CAS history and rematch recovery', () => {
     expect(fresh.private).toMatchObject({ role: null, guess: null, committedAnswer: null, hasGuessed: false, roleAcknowledged: false, answerSubmitted: false,
       revealAcknowledged: false, decisionSubmitted: false, nextRoundReady: false, rematchRequested: false });
     expect(room(players.code).server.matchDeck).toBeNull(); expect(resumed.noteUpdates).toHaveBeenLastCalledWith({});
-    const record = players.host.notesStorage.getItem(players.host.notes.key); other.notes.toggle('comfort', 'cleared');
+    const record = players.host.notesStorage.getItem(players.host.notes.key); other.notes.toggle('spy', 'cleared');
     expect(players.host.notesStorage.getItem(players.host.notes.key)).toBe(record);
     resumed.controller.receive('public', oldView.public); resumed.controller.receive('private', oldView.private);
     expect(resumed.controller.state.snapshot?.public.matchId).toBe(fresh.public.matchId);

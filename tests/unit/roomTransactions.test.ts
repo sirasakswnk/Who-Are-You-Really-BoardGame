@@ -14,7 +14,7 @@ async function answering() {
   const { code } = await instance().createRoom('host', 'หนึ่ง', 'cat');
   await instance().joinRoom(code, 'guest', 'สอง', 'fox');
   await Promise.all([instance().setPlayerReady(code, 'host', true), instance().setPlayerReady(code, 'guest', true)]);
-  await instance({ rolePair: () => ['saver', 'comfort'] }).startMatch(code, 'host');
+  await instance({ rolePair: () => ['alien', 'spy'] }).startMatch(code, 'host');
   await Promise.all([
     instance().dispatchGameAction(code, 'host', 'ack-host', { type: 'ROLE_ACK', seat: 0 }),
     instance().dispatchGameAction(code, 'guest', 'ack-guest', { type: 'ROLE_ACK', seat: 1 }),
@@ -69,8 +69,8 @@ describe('Database authoritative state across independent instances', () => {
   it('scores once when decisions and duplicate receipts race', async () => {
     const code = await deciding();
     const results = await Promise.all([
-      ...Array.from({ length: 4 }, () => instance().dispatchGameAction(code, 'host', 'guess-host', { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'comfort' } })),
-      instance().dispatchGameAction(code, 'guest', 'guess-guest', { type: 'SUBMIT_DECISION', seat: 1, clueIndex: 0, decision: { type: 'guess', roleId: 'saver' } }),
+      ...Array.from({ length: 4 }, () => instance().dispatchGameAction(code, 'host', 'guess-host', { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'spy' } })),
+      instance().dispatchGameAction(code, 'guest', 'guess-guest', { type: 'SUBMIT_DECISION', seat: 1, clueIndex: 0, decision: { type: 'guess', roleId: 'alien' } }),
     ]);
     expect(results.every(r => r.success)).toBe(true);
     expect(room(code).server.gameState.matchScores).toEqual([5, 5]);
@@ -79,14 +79,14 @@ describe('Database authoritative state across independent instances', () => {
   it('preserves secret-independent view revisions while advancing the server revision', async () => {
     const code = await deciding();
     const before = room(code);
-    await instance().dispatchGameAction(code, 'host', 'guess-host', { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'comfort' } });
+    await instance().dispatchGameAction(code, 'host', 'guess-host', { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'spy' } });
     const after = room(code);
     expect(after.server.revision).toBe(before.server.revision! + 1);
     expect(after.public).toEqual(before.public);
     expect(after.private.guest).toEqual(before.private.guest);
     expect(after.private.host.revision).toBe(before.private.host.revision! + 1);
     const writes = db.roomWrites;
-    await instance().dispatchGameAction(code, 'host', 'guess-host', { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'comfort' } });
+    await instance().dispatchGameAction(code, 'host', 'guess-host', { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'spy' } });
     expect(db.roomWrites).toBe(writes);
   });
   it('prepares deck and roles once even when CAS retries repeatedly', async () => {
@@ -94,7 +94,7 @@ describe('Database authoritative state across independent instances', () => {
     await instance().joinRoom(code, 'guest', 'สอง', 'fox');
     await instance().setPlayerReady(code, 'host', true);
     await instance().setPlayerReady(code, 'guest', true);
-    const rolePair = vi.fn(() => ['saver', 'comfort'] as ['saver', 'comfort']);
+    const rolePair = vi.fn(() => ['alien', 'spy'] as ['alien', 'spy']);
     const deck = vi.fn(() => Array.from({ length: 4 }, (_, i) => createDefaultRoundScenarios(i)));
     db.forceConflicts(3, `rooms/${code}`);
     expect(await instance({ rolePair, deck }).startMatch(code, 'host')).toEqual({ success: true });

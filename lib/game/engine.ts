@@ -13,7 +13,7 @@ import {
   ROUNDS_PER_MATCH,
   CLUES_PER_ROUND,
   RoleId,
-  DecisionAction,
+  DecisionAction, ACTIVE_CONTENT_VERSION, stateContentVersion, getRoleIds,
 } from './types';
 import { generateRolePair, canGuessRole } from './roles';
 import { calculateRoundScores } from './scoring';
@@ -46,6 +46,7 @@ export function createInitialGameState(roomId: string, matchId = `m-${Date.now()
     roomId,
     matchId,
     phase: 'LOBBY',
+    contentVersion: ACTIVE_CONTENT_VERSION,
     seats: [null, null],
     roundIndex: 0,
     clueIndex: 0,
@@ -147,6 +148,9 @@ export function processAction(state: GameState, action: GameAction): EngineResul
       }
 
       const rolePair = action.rolePair ?? generateRolePair();
+      if (rolePair[0] === rolePair[1] || rolePair.some(role => !getRoleIds().includes(role))) {
+        return { success: false, state, error: 'Invalid role pair for content version' };
+      }
       const scenarios = action.scenarios ?? createDefaultRoundScenarios(0);
 
       const roundState: RoundState = {
@@ -169,6 +173,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
         state: {
           ...state,
           matchId: action.matchId ?? state.matchId,
+          contentVersion: ACTIVE_CONTENT_VERSION,
           phase: 'ROLE_INTRO',
           roundIndex: 0,
           clueIndex: 0,
@@ -454,7 +459,11 @@ export function processAction(state: GameState, action: GameAction): EngineResul
 
       // Advance to next round
       const nextRoundIndex = state.roundIndex + 1;
-      const rolePair = nextRolePair ?? generateRolePair();
+      const version = stateContentVersion(state);
+      const rolePair = nextRolePair ?? generateRolePair(Math.random, version);
+      if (rolePair[0] === rolePair[1] || rolePair.some(role => !getRoleIds(version).includes(role))) {
+        return { success: false, state, error: 'Invalid role pair for content version' };
+      }
       const scenarios = nextScenarios ?? createDefaultRoundScenarios(nextRoundIndex);
 
       const nextRoundState: RoundState = {
@@ -509,6 +518,7 @@ export function processAction(state: GameState, action: GameAction): EngineResul
             ...state,
             phase: 'LOBBY',
             matchId: action.nextMatchId,
+            contentVersion: ACTIVE_CONTENT_VERSION,
             roundIndex: 0,
             clueIndex: 0,
             matchScores: [0, 0],
@@ -560,6 +570,7 @@ export function getPlayerProjection(state: GameState, seat: 0 | 1): PlayerProjec
   return {
     roomId: state.roomId,
     matchId: state.matchId,
+    contentVersion: stateContentVersion(state),
     phase: state.phase,
     mySeat: seat,
     players: state.seats,

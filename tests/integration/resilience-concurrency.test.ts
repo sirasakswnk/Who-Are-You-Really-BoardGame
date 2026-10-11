@@ -106,7 +106,7 @@ describe('Resilience, Concurrency & Data Privacy Boundary (tests/integration/res
       expect(roomDeciding.public.phase).toBe('DECIDING');
 
       // Player 0 guesses
-      const p0GuessedRole: RoleId = 'saver';
+      const p0GuessedRole: RoleId = 'alien';
       await dispatchGameAction(code, 'player-0', 'dec-p0-guess', {
         type: 'SUBMIT_DECISION',
         clueIndex: 0,

@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local verification tools and preserved source snapshots are not app source.
+    "work/**",
   ]),
 ]);
 

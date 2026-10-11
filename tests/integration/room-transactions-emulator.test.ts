@@ -8,7 +8,7 @@ const host = process.env.F02_RTDB_EMULATOR_HOST;
 if (host && !/^(127\.0\.0\.1|localhost):\d+$/.test(host)) throw new Error('F02 emulator tests require a local loopback host');
 const databaseURL = `http://${host ?? '127.0.0.1:19243'}?ns=mock-f02-${randomUUID()}`;
 const store = () => createFirebaseRoomStore({ databaseURL, accessToken: async () => 'owner' });
-const instance = () => createRoomService(store(), { rolePair: () => ['saver', 'comfort'] });
+const instance = () => createRoomService(store(), { rolePair: () => ['alien', 'spy'] });
 
 describe.skipIf(!host)('Real RTDB emulator CAS across independent instances', () => {
   afterAll(async () => {

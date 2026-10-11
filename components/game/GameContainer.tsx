@@ -152,12 +152,12 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
   );
   const { public: pub, private: own, seat, isHost } = snapshot;
   const blocked = sessionState.actionBlocked || (pub.phase === 'MATCH_RESULT' && pub.players.some(player => player === null));
-  const viewKey = `${pub.matchId}:${pub.roundId}:${pub.phase}:${pub.clueIndex}`;
+  const viewKey = `${pub.contentVersion}:${pub.matchId}:${pub.roundId}:${pub.phase}:${pub.clueIndex}`;
   return (
     <div className="game-screen-wrapper">
       <GameHeader roomCode={roomCode} phase={pub.phase} roundIndex={pub.roundIndex} clueIndex={pub.clueIndex}
         mySeat={seat} scores={pub.matchScores} leaveBlocked={sessionState.sending || sessionState.left}
-        myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
+        myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.contentVersion}:${pub.matchId}:${pub.roundId}`}
         onOpenRules={() => setIsRulesOpen(true)} onLeaveRoom={leave} />
       <div className="room-sync-status" role="status" aria-live="polite">
         {sessionState.sending ? 'กำลังบันทึกและยืนยันคำขอ...'
@@ -186,15 +186,16 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
         {pub.phase === 'ROLE_INTRO' && <RoleIntroView myRole={own.role} roundIndex={pub.roundIndex}
           actionBlocked={blocked} hasAcknowledged={own.roleAcknowledged} onAcknowledgeRole={() => send({ type: 'ROLE_ACK' })} />}
         {pub.phase === 'ANSWERING' && <AnsweringView scenario={pub.scenario} clueIndex={pub.clueIndex}
-          myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
+          myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.contentVersion}:${pub.matchId}:${pub.roundId}`}
           actionBlocked={blocked} myCommittedAnswer={own.committedAnswer} opponentHasAnswered={false}
           onSubmitAnswer={optionId => send({ type: 'SUBMIT_ANSWER', optionId })} />}
         {pub.phase === 'ANSWER_REVEAL' && <AnswerRevealView scenario={pub.scenario} clueIndex={pub.clueIndex}
-          myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
+          myRole={own.role} roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.contentVersion}:${pub.matchId}:${pub.roundId}`}
           actionBlocked={blocked} hasAcknowledged={own.revealAcknowledged} mySeat={seat} players={pub.players}
           revealedAnswers={pub.revealedAnswers} evidence={pub.revealedEvidence} onAcknowledgeReveal={() => send({ type: 'REVEAL_ACK' })} />}
         {pub.phase === 'DECIDING' && <DecidingView clueIndex={pub.clueIndex} myRole={own.role}
-          roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.matchId}:${pub.roundId}`}
+          mySeat={seat} evidence={pub.revealedEvidence}
+          roleAcknowledged={own.roleAcknowledged} roleContextKey={`${pub.contentVersion}:${pub.matchId}:${pub.roundId}`}
           actionBlocked={blocked} hasSubmitted={own.decisionSubmitted} hasGuessed={own.hasGuessed}
           myGuessedRole={own.guess} myGuessedClueIndex={own.guessClueIndex}
           scratchpad={notes} onToggleNote={(role, tag) => notesRef.current?.toggle(role, tag)}
@@ -206,7 +207,7 @@ export default function GameContainer({ roomCode }: { roomCode: string }) {
           actionBlocked={blocked} leaveBlocked={sessionState.sending} roundHistory={pub.roundHistory} rematchRequests={pub.rematchRequests}
           onRequestRematch={() => send({ type: 'REMATCH_REQUEST' })} onBackToHome={leave} />}
       </main>
-      <RulesModal isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
+      <RulesModal contentVersion={pub.contentVersion} isOpen={isRulesOpen} onClose={() => setIsRulesOpen(false)} />
     </div>
   );
 }

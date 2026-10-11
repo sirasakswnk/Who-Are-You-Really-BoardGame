@@ -14,13 +14,13 @@ import AbandonedView from '@/components/game/AbandonedView';
 import RoomConnectionStatus from '@/components/game/RoomConnectionStatus';
 import { clientSnapshot } from '../helpers/clientSnapshot';
 import { SCENARIOS, stripEditorial } from '@/content/scenarios';
-import { ROLES, PlayerSeat, type RoundResult } from '@/lib/game/types';
+import { getRoleInfo, PlayerSeat, type RoundResult } from '@/lib/game/types';
 
 describe('F04 server-owned submission flags after reload', () => {
   const scenario = stripEditorial(SCENARIOS[0]);
   it('shows the role wait state from the persisted acknowledgement', () => {
     const html = renderToString(React.createElement(RoleIntroView, {
-      myRole: 'saver', roundIndex: 0, hasAcknowledged: true, onAcknowledgeRole: async () => {},
+      myRole: 'alien', roundIndex: 0, hasAcknowledged: true, onAcknowledgeRole: async () => {},
     }));
     expect(html).toContain('กำลังรออีกฝ่าย'); expect(html).not.toContain('acknowledge-role-btn');
   });
@@ -39,7 +39,7 @@ describe('F04 server-owned submission flags after reload', () => {
   });
   it.each([false, true])('shows a waiting decision with hasGuessed=%s instead of another continue/ack', hasGuessed => {
     const html = renderToString(React.createElement(DecidingView, {
-      clueIndex: 0, myRole: 'saver', hasGuessed, myGuessedRole: hasGuessed ? 'comfort' : null,
+      clueIndex: 0, mySeat: 0, myRole: 'alien', hasGuessed, myGuessedRole: hasGuessed ? 'spy' : null,
       myGuessedClueIndex: hasGuessed ? 0 : null, hasSubmitted: true, onSubmitDecision: async () => {},
     }));
     expect(html).toContain('รออีกฝ่ายพร้อม'); expect(html).not.toContain('continue-clue-btn');
@@ -47,7 +47,7 @@ describe('F04 server-owned submission flags after reload', () => {
   });
   it('shows next-round waiting from persisted readiness', () => {
     const html = renderToString(React.createElement(RoundRevealView, {
-      roundSummary: { roundIndex: 0, roles: ['saver', 'comfort'], guesses: ['comfort', 'saver'], guessClueIndex: [0, 0], scores: [5, 5], reason: ['', ''] },
+      roundSummary: { roundIndex: 0, roles: ['alien', 'spy'], guesses: ['spy', 'alien'], guessClueIndex: [0, 0], scores: [5, 5], reason: ['', ''] },
       roundIndex: 0, mySeat: 0, players: [mockPlayer0, mockPlayer1], matchScores: [5, 5],
       hasAcknowledged: true, onNextRoundReady: async () => {},
     }));
@@ -55,7 +55,7 @@ describe('F04 server-owned submission flags after reload', () => {
   });
   it('disables an otherwise valid acknowledgement while a request is unresolved', () => {
     const html = renderToString(React.createElement(RoleIntroView, {
-      myRole: 'saver', roundIndex: 0, hasAcknowledged: false, actionBlocked: true, onAcknowledgeRole: async () => {},
+      myRole: 'alien', roundIndex: 0, hasAcknowledged: false, actionBlocked: true, onAcknowledgeRole: async () => {},
     }));
     expect(html).toMatch(/class="[^"]*acknowledge-role-btn[^"]*"[^>]*disabled=""/);
   });
@@ -65,7 +65,7 @@ describe('F05 departure and connection UI', () => {
   it('shows a termination reason without declaring a winner or revealing a role', () => {
     const html = renderToString(React.createElement(AbandonedView, { displayName: 'คู่เล่น', busy: true, onLeave: () => {} }));
     expect(html).toContain('ไม่มีผู้ชนะเต็มเกม'); expect(html).toContain('เกมยุติแล้ว');
-    expect(html).toMatch(/<button[^>]*disabled=""/); expect(html).not.toContain('saver');
+    expect(html).toMatch(/<button[^>]*disabled=""/); expect(html).not.toContain('alien');
   });
   it('distinguishes unknown presence from offline and shows retained seats after confirmed disconnection', () => {
     const snapshot = clientSnapshot();
@@ -78,7 +78,7 @@ describe('F05 departure and connection UI', () => {
     const snapshot = clientSnapshot('DECIDING'); snapshot.private.decisionSubmitted = true;
     const html = renderToString(React.createElement(RoomConnectionStatus, { snapshot, presence: { known: true, online: { guest: true }, error: null } }));
     expect(html).toContain('สอง ออนไลน์'); expect(html).toContain('กำลังรอให้ครบทั้งสองคน');
-    expect(html).not.toContain('ทาย'); expect(html).not.toContain('saver');
+    expect(html).not.toContain('ทาย'); expect(html).not.toContain('alien');
   });
 });
 
@@ -94,21 +94,58 @@ describe('F06 content snapshots and persisted notes UI', () => {
     for (const text of ['สถานการณ์เดิม', 'คำตอบเดิม A', 'คำตอบเดิม B', 'ข้อความข้อปัจจุบัน']) expect(html).toContain(text);
     expect(html).not.toContain('raw-choice');
   });
-  it('renders all completed evidence, guesses, guess timing and reasons with no raw role or option id', () => {
+  it('renders completed evidence, guesses, timing and reasons with no raw role or option id in player-facing text', () => {
     const html = renderToString(React.createElement(MatchResultView, {
       mySeat: 1, players: [mockPlayer0, mockPlayer1], matchScores: [14, 14], rematchRequests: [false, false],
       onRequestRematch: async () => {}, onBackToHome: () => {}, roundHistory: Array.from({ length: 4 }, (_, roundIndex): RoundResult => ({
-        roundIndex, roles: ['saver', 'comfort'], guesses: ['comfort', 'saver'], guessClueIndex: [roundIndex, roundIndex], scores: [5 - roundIndex, 5 - roundIndex],
+        roundIndex, roles: ['alien', 'spy'], guesses: ['spy', 'alien'], guessClueIndex: [roundIndex, roundIndex], scores: [5 - roundIndex, 5 - roundIndex],
         reason: ['ทายตรงกับบทบาท', 'ทายตรงกับบทบาท'], evidence: [{ clueIndex: 0, scenarioId: 'unused-in-ui', scenarioVersion: 1, prompt: `หลักฐานรอบ ${roundIndex + 1}`, answers: ['คำตอบของคนแรก', 'คำตอบของคนที่สอง'] }],
       })),
     }));
     for (const text of ['หลักฐานรอบ 1', 'หลักฐานรอบ 4', 'หลังข้อที่ 4', 'ทายตรงกับบทบาท', 'คำตอบของคนแรก', 'คำตอบของคนที่สอง']) expect(html).toContain(text);
-    expect(html).not.toContain('unused-in-ui'); expect(html).not.toContain('saver');
+    expect(html).not.toContain('unused-in-ui');
+    // Role IDs may appear in image URLs; player-facing text must stay in Thai.
+    expect(html.replace(/<[^>]*>/g, '')).not.toContain('alien');
   });
   it('shows retained suspicion tags after the decision view remounts', () => {
-    const html = renderToString(React.createElement(DecidingView, { clueIndex: 2, myRole: 'saver', hasGuessed: false,
-      myGuessedRole: null, myGuessedClueIndex: null, scratchpad: { comfort: 'suspect', explorer: 'cleared' }, onSubmitDecision: async () => {} }));
-    expect(html).toContain('note-suspect'); expect(html).toContain('note-cleared'); expect(html).toContain('aria-pressed="true"');
+    const html = renderToString(React.createElement(DecidingView, { clueIndex: 2, mySeat: 0, myRole: 'alien', hasGuessed: false,
+      myGuessedRole: null, myGuessedClueIndex: null, scratchpad: { spy: 'suspect', vampire: 'cleared' }, onSubmitDecision: async () => {} }));
+    expect(html).toContain('note-suspect'); expect(html).toContain('note-cleared');
+    expect(html).toContain('สงสัย'); expect(html).toContain('ตัดออก');
+    expect(html).not.toContain('scratchpad-tags');
+  });
+});
+
+describe('Deciding question and opponent answer review', () => {
+  it.each([0, 1] as const)('shows the just-revealed question and the other seat answer for seat %s', mySeat => {
+    const answers: [string, string] = ['คำตอบของที่นั่งแรก', 'คำตอบของที่นั่งสอง'];
+    const html = renderToString(React.createElement(DecidingView, {
+      clueIndex: 1, mySeat, myRole: 'alien', hasGuessed: false,
+      myGuessedRole: null, myGuessedClueIndex: null, onSubmitDecision: async () => {},
+      evidence: [
+        { clueIndex: 1, scenarioId: 'current', scenarioVersion: 1, prompt: 'โจทย์ที่เพิ่งเฉลย', answers },
+        { clueIndex: 2, scenarioId: 'future', scenarioVersion: 1, prompt: 'โจทย์ถัดไปที่ไม่ควรแสดง', answers: ['คำตอบอนาคต A', 'คำตอบอนาคต B'] },
+        { clueIndex: 0, scenarioId: 'old', scenarioVersion: 1, prompt: 'โจทย์เก่าที่ไม่ใช่ข้อนี้', answers: ['คำตอบเก่า A', 'คำตอบเก่า B'] },
+      ],
+    }));
+    expect(html).toContain('โจทย์ที่เพิ่งเฉลย');
+    expect(html).toContain(answers[mySeat === 0 ? 1 : 0]);
+    for (const text of [answers[mySeat], 'โจทย์ถัดไปที่ไม่ควรแสดง', 'โจทย์เก่าที่ไม่ใช่ข้อนี้', 'คำตอบอนาคต', 'คำตอบเก่า', 'ทายถูกตอนนี้ได้รับ']) {
+      expect(html).not.toContain(text);
+    }
+    expect(html.replace(/<!-- -->/g, '')).toContain('ทายถูกตอนนี้ได้ 4 แต้ม');
+    expect(html).not.toContain('ล็อกคำทาย (+');
+  });
+
+  it('shows an empty review when this clue has no evidence instead of borrowing a different question', () => {
+    const html = renderToString(React.createElement(DecidingView, {
+      clueIndex: 1, mySeat: 0, myRole: 'alien', hasGuessed: false,
+      myGuessedRole: null, myGuessedClueIndex: null, onSubmitDecision: async () => {},
+      evidence: [{ clueIndex: 0, scenarioId: 'old', scenarioVersion: 1, prompt: 'โจทย์เก่า', answers: ['คำตอบเก่า A', 'คำตอบเก่า B'] }],
+    }));
+    expect(html).toContain('ยังไม่มีคำถามและคำตอบที่เปิดเผยสำหรับข้อนี้');
+    expect(html).not.toContain('คำตอบเก่า');
+    expect(html).not.toContain('โจทย์เก่า');
   });
 });
 
@@ -139,7 +176,7 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
       })
     );
     expect(html).toContain('คู่มือนักสืบ &amp; กติกาการเล่น');
-    expect(html).toContain('กฎข้อสำคัญ');
+    expect(html).toContain('การสวมบท');
     expect(html).toContain('ตารางคะแนน');
   });
 
@@ -182,13 +219,13 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
   it('renders RoleIntroView with secret role and traits', () => {
     const html = renderToString(
       React.createElement(RoleIntroView, {
-        myRole: 'saver',
+        myRole: 'alien',
         roundIndex: 0,
         hasAcknowledged: false,
         onAcknowledgeRole: async () => {},
       })
     );
-    const roleInfo = ROLES['saver'];
+    const roleInfo = getRoleInfo('alien');
     expect(html).toContain(roleInfo.name);
     expect(html).toContain(roleInfo.description);
     expect(html).toContain('เข้าใจบทบาทแล้ว');
@@ -231,20 +268,24 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
     expect(html).toContain(scenario.options[1].label);
   });
 
-  it('renders DecidingView with 6 role suspect dossiers and action buttons', () => {
+  it('renders five selectable suspects excluding the assigned role', () => {
     const html = renderToString(
       React.createElement(DecidingView, {
         clueIndex: 0,
-        myRole: 'saver',
+        mySeat: 0,
+        myRole: 'alien',
         hasGuessed: false,
         myGuessedRole: null,
         myGuessedClueIndex: null,
         onSubmitDecision: async () => {},
       })
     );
-    expect(html).toContain('ตัดบทบาทของคุณออกแล้ว เหลือ 5 ผู้ต้องสงสัย');
+    expect(html.replace(/<!-- -->/g, '')).toContain('ผู้ต้องสงสัย 5 บทบาท · ตัดบทของคุณออกแล้ว');
+    expect(html.match(/type="radio"/g)).toHaveLength(5);
+    expect(html).not.toContain('is-self-eliminated');
+    expect(html).not.toContain('aria-label="เอเลี่ยนปลอมตัว"');
     expect(html).toContain('ล็อกคำทาย');
-    expect(html).toContain('ดูสถานการณ์ต่อไป');
+    expect(html).toContain('ดูข้อถัดไป');
   });
 
   it('renders RoundRevealView showing secret roles and round score delta', () => {
@@ -252,8 +293,8 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
       React.createElement(RoundRevealView, {
         roundSummary: {
           roundIndex: 0,
-          roles: ['saver', 'comfort'],
-          guesses: ['comfort', null],
+          roles: ['alien', 'spy'],
+          guesses: ['spy', null],
           guessClueIndex: [0, null],
           scores: [5, 0],
           reason: ['คุณทายถูกที่เบาะแส 1 (+5 แต้ม)', 'เพื่อนยังไม่ได้ส่งคำทาย (+0 แต้ม)'],
@@ -279,10 +320,10 @@ describe('M4 Mobile UI Views Server Rendering & Contract Tests', () => {
         players: [mockPlayer0, mockPlayer1],
         matchScores: [14, 8],
         roundHistory: [
-          { roundIndex: 0, roles: ['saver', 'comfort'], scores: [5, 0], guesses: ['comfort', null], guessClueIndex: [0, null], reason: ['', ''] },
-          { roundIndex: 1, roles: ['explorer', 'companion'], scores: [4, 4], guesses: ['companion', 'explorer'], guessClueIndex: [1, 1], reason: ['', ''] },
-          { roundIndex: 2, roles: ['impatient', 'cautious'], scores: [3, 2], guesses: ['cautious', 'impatient'], guessClueIndex: [2, 3], reason: ['', ''] },
-          { roundIndex: 3, roles: ['comfort', 'saver'], scores: [2, 2], guesses: ['saver', 'comfort'], guessClueIndex: [3, 3], reason: ['', ''] },
+          { roundIndex: 0, roles: ['alien', 'spy'], scores: [5, 0], guesses: ['spy', null], guessClueIndex: [0, null], reason: ['', ''] },
+          { roundIndex: 1, roles: ['vampire', 'time_traveler'], scores: [4, 4], guesses: ['time_traveler', 'vampire'], guessClueIndex: [1, 1], reason: ['', ''] },
+          { roundIndex: 2, roles: ['thief', 'ghost'], scores: [3, 2], guesses: ['ghost', 'thief'], guessClueIndex: [2, 3], reason: ['', ''] },
+          { roundIndex: 3, roles: ['spy', 'alien'], scores: [2, 2], guesses: ['alien', 'spy'], guessClueIndex: [3, 3], reason: ['', ''] },
         ],
         rematchRequests: [false, false],
         onRequestRematch: async () => {},

@@ -56,20 +56,20 @@ describe('Roles & Role Pairing', () => {
   });
 
   it('validates role IDs correctly', () => {
-    expect(isValidRoleId('saver')).toBe(true);
-    expect(isValidRoleId('comfort')).toBe(true);
-    expect(isValidRoleId('explorer')).toBe(true);
-    expect(isValidRoleId('companion')).toBe(true);
-    expect(isValidRoleId('impatient')).toBe(true);
-    expect(isValidRoleId('cautious')).toBe(true);
+    expect(isValidRoleId('alien')).toBe(true);
+    expect(isValidRoleId('spy')).toBe(true);
+    expect(isValidRoleId('vampire')).toBe(true);
+    expect(isValidRoleId('time_traveler')).toBe(true);
+    expect(isValidRoleId('thief')).toBe(true);
+    expect(isValidRoleId('ghost')).toBe(true);
     expect(isValidRoleId('traitor')).toBe(false);
     expect(isValidRoleId(null)).toBe(false);
     expect(isValidRoleId(123)).toBe(false);
   });
 
   it('canGuessRole disallows guessing own role', () => {
-    expect(canGuessRole('comfort', 'saver')).toBe(true);
-    expect(canGuessRole('saver', 'saver')).toBe(false);
-    expect(canGuessRole('cautious', 'cautious')).toBe(false);
+    expect(canGuessRole('spy', 'alien')).toBe(true);
+    expect(canGuessRole('alien', 'alien')).toBe(false);
+    expect(canGuessRole('ghost', 'ghost')).toBe(false);
   });
 });

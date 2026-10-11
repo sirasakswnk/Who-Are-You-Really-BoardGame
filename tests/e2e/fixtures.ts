@@ -4,7 +4,7 @@ import { acceptanceEnv } from '../helpers/acceptanceEnv';
 import { decodeRoomRecord } from '../../lib/server/roomSchema';
 import type { RoomRecord } from '../../lib/server/roomRecord';
 import type { RoleId } from '../../lib/game/types';
-import { ROLES } from '../../lib/game/types';
+import { getRoleInfo } from '../../lib/game/types';
 
 const target = acceptanceEnv();
 export { expect };
@@ -79,8 +79,7 @@ export async function answers(duo: Duo) {
   await phase(duo, 'ANSWER_REVEAL'); await both(duo, '.proceed-decide-btn'); await phase(duo, 'DECIDING');
 }
 export async function guess(player: Actor, role: RoleId) {
-  const card = player.page.locator('.suspect-card').filter({ has: player.page.locator(`.role-${role}`) });
-  await expect(card).toContainText(ROLES[role].name); await card.click();
+  await player.page.getByRole('radio', { name: getRoleInfo(role).name, exact: true }).check();
   await click(player, '.lock-guess-btn'); await click(player, '.confirm-modal-actions .btn-primary');
 }
 export async function reload(player: Actor, selector: string) {

@@ -40,6 +40,9 @@ yarn-error.log*
 /blob-report/
 /playwright/.cache/
 /work/verification/f08/
+/work/verification/content-update/
+firebase-debug.log*
+database-debug.log*
 
 # vercel
 .vercel

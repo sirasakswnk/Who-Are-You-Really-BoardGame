@@ -19,7 +19,7 @@ let db: ReturnType<typeof fakeRTDB>;
 const sessions: RoomSession[] = [];
 beforeEach(() => {
   db = fakeRTDB(); vi.spyOn(roomStore, 'getRoomStore').mockImplementation(() => db.store());
-  vi.spyOn(roles, 'generateRolePair').mockReturnValue(['saver', 'comfort']);
+  vi.spyOn(roles, 'generateRolePair').mockReturnValue(['alien', 'spy']);
 });
 afterEach(() => { sessions.splice(0).forEach(session => session.dispose()); vi.restoreAllMocks(); });
 const request = (uid: string, body: unknown) => new Request('http://localhost/api/test', { method: 'POST',
@@ -85,7 +85,7 @@ describe('F08 client → actual routes → independent CAS transports acceptance
           expect(f.room().public.phase).toBe('DECIDING');
         }
         const command = (seat: 0 | 1): ClientCommand => ({ type: 'SUBMIT_DECISION', decision: clue < timings[round][seat] ? { type: 'continue' }
-          : clue > timings[round][seat] ? { type: 'ack' } : { type: 'guess', roleId: round === 2 && seat === 1 ? 'explorer' : seat === 0 ? 'comfort' : 'saver' } });
+          : clue > timings[round][seat] ? { type: 'ack' } : { type: 'guess', roleId: round === 2 && seat === 1 ? 'vampire' : seat === 0 ? 'spy' : 'alien' } });
         await Promise.all([f.host.submit(command(0)), f.guest.submit(command(1))]); await f.refresh();
         expect(f.host.state.actionError, `host round=${round} clue=${clue}`).toBeNull();
         expect(f.guest.state.actionError, `guest round=${round} clue=${clue}`).toBeNull();

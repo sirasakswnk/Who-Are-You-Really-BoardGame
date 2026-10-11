@@ -1,4 +1,4 @@
-import { ROLE_IDS, type DecisionAction } from '../game/types';
+import { KNOWN_ROLE_IDS, type DecisionAction } from '../game/types';
 import type { ActionContext, ActionEnvelope, ClientCommand } from '../game/commands';
 import { RoomServiceError } from './roomErrors';
 
@@ -46,8 +46,8 @@ function decision(value: unknown): DecisionAction {
   const data = object(value);
   if (data.type === 'guess') {
     fields(data, ['type', 'roleId']);
-    if (!ROLE_IDS.includes(data.roleId as typeof ROLE_IDS[number])) bad();
-    return { type: 'guess', roleId: data.roleId as typeof ROLE_IDS[number] };
+    if (!KNOWN_ROLE_IDS.includes(data.roleId as typeof KNOWN_ROLE_IDS[number])) bad();
+    return { type: 'guess', roleId: data.roleId as typeof KNOWN_ROLE_IDS[number] };
   }
   fields(data, ['type']);
   return data.type === 'continue' || data.type === 'ack' ? { type: data.type } : bad();

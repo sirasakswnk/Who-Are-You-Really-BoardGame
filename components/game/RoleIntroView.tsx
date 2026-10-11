@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { RoleId, ROLES, ROUNDS_PER_MATCH } from '@/lib/game/types';
+import { RoleId, getRoleInfo, ROUNDS_PER_MATCH } from '@/lib/game/types';
+import RolePortrait from './RolePortrait';
 import styles from './RoleIntroView.module.css';
 
 interface RoleIntroViewProps {
@@ -23,7 +24,7 @@ export default function RoleIntroView({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const documentId = useId();
 
-  const roleInfo = myRole ? ROLES[myRole] : null;
+  const roleInfo = myRole ? getRoleInfo(myRole) : null;
 
   const handleAcknowledge = async () => {
     if (actionBlocked || isSubmitting || hasAcknowledged) return;
@@ -82,6 +83,7 @@ export default function RoleIntroView({
             {roleInfo ? (
               <div className={`secret-role-body ${styles.roleBody}`}>
                 <p className={styles.roleKicker}>ตัวตนของคุณในรอบนี้</p>
+                <RolePortrait role={roleInfo.id} className={styles.portrait} sizes="(max-width: 480px) 160px, 200px" />
                 <h3 className={`secret-role-name role-${roleInfo.id} ${styles.roleName}`}>
                   {roleInfo.name}
                 </h3>
@@ -100,8 +102,8 @@ export default function RoleIntroView({
 
       <div className={`secret-golden-rule ${styles.reminder}`}>
         <span className={styles.reminderMark} aria-hidden="true">!</span>
-        <p><strong>ข้อควรจำ:</strong> ตอบตามบทบาทอย่างเป็นธรรมชาติ
-          ห้ามจงใจตอบสลับเพื่อกันเพื่อนเดา เพราะเพื่อนก็พยายามจับทางคุณอยู่!</p>
+        <p><strong>ข้อควรจำ:</strong> ตอบตามบทบาทอย่างเป็นธรรมชาติและพยายามกลมกลืนกับมนุษย์
+          ทุกบทเลือกได้ทุกตัวเลือก ไม่มีคำตอบถูกผิดหรือคะแนนจากคำตอบ</p>
       </div>
 
       <footer className={`role-intro-footer ${styles.footer}`}>

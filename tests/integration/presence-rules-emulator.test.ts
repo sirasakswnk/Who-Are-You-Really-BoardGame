@@ -18,7 +18,7 @@ function request(path: string, method = 'GET', value?: unknown, uid = 'host', ad
 }
 const seed = (expiresAt = Date.now() + 60_000) => request('rooms/ABC234', 'PUT', {
   members: { host: { seat: 0 }, guest: { seat: 1 } }, public: { phase: 'ANSWERING' },
-  private: { host: { role: 'saver' }, guest: { role: 'comfort' } }, server: { expiresAt, secret: true },
+  private: { host: { role: 'alien' }, guest: { role: 'spy' } }, server: { expiresAt, secret: true },
 }, 'host', true);
 
 describe.skipIf(!host)('F05/F07 real RTDB presence and room expiry Rules', () => {

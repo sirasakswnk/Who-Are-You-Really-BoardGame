@@ -1,7 +1,8 @@
 'use client';
 
 import { useId, useState } from 'react';
-import { RoundResult, PlayerSeat, ROLES, ROUNDS_PER_MATCH } from '@/lib/game/types';
+import { RoundResult, PlayerSeat, getRoleInfo, ROUNDS_PER_MATCH } from '@/lib/game/types';
+import RolePortrait from './RolePortrait';
 import styles from './RoundRevealView.module.css';
 
 interface RoundRevealViewProps {
@@ -96,13 +97,14 @@ export default function RoundRevealView({
             </div>
           </div>
           <div className={`result-actual-role ${styles.actualRole}`}>
-            <span>บทบาทจริง:</span><strong>{ROLES[myActualRole].name}</strong>
+            <RolePortrait role={myActualRole} className={styles.portrait} sizes="72px" />
+            <div className={styles.roleText}><span>บทบาทจริง:</span><strong>{getRoleInfo(myActualRole).name}</strong></div>
           </div>
           <div className={`result-guess-section ${styles.guessSection}`}>
             <div className={`guess-row ${styles.guessRow}`}>
               <span className={`guess-label ${styles.guessLabel}`}>คุณทายว่าเพื่อนคือ:</span>
               <span className={`guess-value ${styles.guessValue}`}>
-                {myGuess ? ROLES[myGuess].name : 'ไม่ได้ส่งคำทาย'}
+                {myGuess ? getRoleInfo(myGuess).name : 'ไม่ได้ส่งคำทาย'}
               </span>
             </div>
             <div className={styles.scoreLine}>
@@ -127,13 +129,14 @@ export default function RoundRevealView({
             </div>
           </div>
           <div className={`result-actual-role ${styles.actualRole}`}>
-            <span>บทบาทจริง:</span><strong>{ROLES[oppActualRole].name}</strong>
+            <RolePortrait role={oppActualRole} className={styles.portrait} sizes="72px" />
+            <div className={styles.roleText}><span>บทบาทจริง:</span><strong>{getRoleInfo(oppActualRole).name}</strong></div>
           </div>
           <div className={`result-guess-section ${styles.guessSection}`}>
             <div className={`guess-row ${styles.guessRow}`}>
               <span className={`guess-label ${styles.guessLabel}`}>เพื่อนทายว่าคุณคือ:</span>
               <span className={`guess-value ${styles.guessValue}`}>
-                {oppGuess ? ROLES[oppGuess].name : 'ไม่ได้ส่งคำทาย'}
+                {oppGuess ? getRoleInfo(oppGuess).name : 'ไม่ได้ส่งคำทาย'}
               </span>
             </div>
             <div className={styles.scoreLine}>

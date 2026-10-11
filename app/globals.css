@@ -2332,7 +2332,9 @@ body {
 .rules-file-companion { --role-accent: #AD1457; }
 .rules-file-impatient { --role-accent: #D32F2F; }
 .rules-file-cautious { --role-accent: #455A64; }
-.rules-role-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.rules-role-identity { display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; gap: 12px; margin-bottom: 12px; }
+.rules-role-portrait { width: 80px; }
+.rules-role-header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
 .rules-role-index { color: var(--role-accent); font: 800 23px/1 var(--font-en); }
 .rules-role-badge { display: inline-block; padding: 3px 8px; border: 1px solid currentColor; border-radius: 4px; color: var(--role-accent); font-size: 14px; font-weight: 800; line-height: 1.6; }
 .rules-role-desc { margin: 0; color: var(--ink); font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
@@ -2404,3 +2406,21 @@ body {
 .room-recovery-banner p { margin: 0 0 0.75rem; }
 .room-recovery-actions { display: flex; flex-wrap: wrap; gap: 0.65rem; }
 .room-recovery-actions .btn { white-space: normal; }
+
+.role-alien { color: #2E7D32; }
+.rules-file-alien { --role-accent: #2E7D32; }
+
+.role-spy { color: #1565C0; }
+.rules-file-spy { --role-accent: #1565C0; }
+
+.role-vampire { color: #AD1457; }
+.rules-file-vampire { --role-accent: #AD1457; }
+
+.role-time_traveler { color: #A64D14; }
+.rules-file-time_traveler { --role-accent: #A64D14; }
+
+.role-thief { color: #A17906; }
+.rules-file-thief { --role-accent: #A17906; }
+
+.role-ghost { color: #455A64; }
+.rules-file-ghost { --role-accent: #455A64; }

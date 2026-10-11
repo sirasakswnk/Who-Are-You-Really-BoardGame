@@ -53,7 +53,9 @@
 .cardLabel { font-size: 11px; line-height: 1.6; }
 .myCard .cardLabel { color: var(--sea); }
 .opponentCard .cardLabel { color: var(--brick); }
-.folder .actualRole { display: flex; flex-direction: column; gap: 5px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--round-grain), var(--folder); color: var(--ink-soft); font-size: 11px; line-height: 1.7; }
+.folder .actualRole { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--round-grain), var(--folder); color: var(--ink-soft); font-size: 11px; line-height: 1.7; }
+.portrait { width: 72px; }
+.roleText { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
 .folder .actualRole strong { color: var(--ink); font-size: 17px; font-weight: 800; overflow-wrap: anywhere; }
 .folder .guessSection { display: flex; flex-direction: column; flex: 1; gap: 12px; }
 .folder .guessRow { display: flex; flex-direction: column; gap: 4px; padding: 0 2px; font-size: 12px; line-height: 1.8; overflow-wrap: anywhere; }
@@ -104,7 +106,8 @@
   .avatar { width: 28px; height: 28px; padding: 2px; }
   .folder .name { font-size: 13px; line-height: 1.6; }
   .cardLabel { display: none; }
-  .folder .actualRole { gap: 2px; padding: 6px; }
+  .folder .actualRole { flex-direction: column; gap: 4px; padding: 6px; }
+  .roleText { gap: 2px; }
   .folder .actualRole strong { font-size: 14px; line-height: 1.6; }
   .folder .guessSection { gap: 8px; }
   .folder .guessRow { gap: 2px; padding: 0; font-size: 11px; line-height: 1.7; text-align: left; }

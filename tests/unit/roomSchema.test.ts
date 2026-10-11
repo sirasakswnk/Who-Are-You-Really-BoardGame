@@ -44,7 +44,7 @@ function start(): GameState {
   let state = lobby();
   state = apply(state, { type: 'PLAYER_READY', seat: 0, ready: true });
   state = apply(state, { type: 'PLAYER_READY', seat: 1, ready: true });
-  return apply(state, { type: 'START_MATCH', rolePair: ['saver', 'comfort'] });
+  return apply(state, { type: 'START_MATCH', rolePair: ['alien', 'spy'] });
 }
 function deciding(): GameState {
   let state = start();
@@ -81,9 +81,9 @@ describe('Persisted room decoding through Firebase serialization', () => {
     stored.seats = { 1: state.seats[1] };
     expect(decodeRoomRecord(raw, 'TEST23')!.server.gameState.seats).toEqual([null, state.seats[1]]);
 
-    state = apply(deciding(), { type: 'SUBMIT_DECISION', seat: 1, clueIndex: 0, decision: { type: 'guess', roleId: 'saver' } });
+    state = apply(deciding(), { type: 'SUBMIT_DECISION', seat: 1, clueIndex: 0, decision: { type: 'guess', roleId: 'alien' } });
     const normalized = decode(state);
-    expect(normalized.server.gameState.currentRound!.guesses).toEqual([null, 'saver']);
+    expect(normalized.server.gameState.currentRound!.guesses).toEqual([null, 'alien']);
     expect(normalized.server.gameState.currentRound!.guessClueIndex).toEqual([null, 0]);
     expect(normalized.private.guest.decisionSubmitted).toBe(true);
     expect(normalized.private.host.decisionSubmitted).toBe(false);
@@ -92,8 +92,8 @@ describe('Persisted room decoding through Firebase serialization', () => {
   it('restores an entirely empty room and regenerates projections rather than trusting stored views', () => {
     const original = record(createInitialGameState('TEST23', 'empty-match'));
     const raw = firebaseRoundTrip(original) as Record<string, unknown>;
-    raw.public = { phase: 'MATCH_RESULT', roles: ['saver', 'comfort'], internalRevision: 999 };
-    raw.private = { outsider: { role: 'explorer' } };
+    raw.public = { phase: 'MATCH_RESULT', roles: ['alien', 'spy'], internalRevision: 999 };
+    raw.private = { outsider: { role: 'vampire' } };
     const normalized = decodeRoomRecord(raw, 'TEST23')!;
     expect(normalized).toEqual(original);
     expect(normalized.members).toEqual({});
@@ -110,7 +110,7 @@ describe('Persisted room decoding through Firebase serialization', () => {
     };
     step({ type: 'PLAYER_READY', seat: 0, ready: true });
     step({ type: 'PLAYER_READY', seat: 1, ready: true });
-    step({ type: 'START_MATCH', rolePair: ['saver', 'comfort'] });
+    step({ type: 'START_MATCH', rolePair: ['alien', 'spy'] });
     for (let round = 0; round < 4; round++) {
       for (const seat of [0, 1] as const) step({ type: 'ROLE_ACK', seat });
       for (let clueIndex = 0; clueIndex < 4; clueIndex++) {
@@ -121,12 +121,12 @@ describe('Persisted room decoding through Firebase serialization', () => {
           step({
             type: 'SUBMIT_DECISION', seat, clueIndex,
             decision: earlyGuess && clueIndex > 0 ? { type: 'ack' }
-              : earlyGuess || clueIndex === 3 ? { type: 'guess', roleId: seat === 0 ? 'comfort' : 'saver' }
+              : earlyGuess || clueIndex === 3 ? { type: 'guess', roleId: seat === 0 ? 'spy' : 'alien' }
               : { type: 'continue' },
           });
         }
       }
-      for (const seat of [0, 1] as const) step({ type: 'NEXT_ROUND_READY', seat, nextRolePair: ['saver', 'comfort'] });
+      for (const seat of [0, 1] as const) step({ type: 'NEXT_ROUND_READY', seat, nextRolePair: ['alien', 'spy'] });
     }
     expect(state.phase).toBe('MATCH_RESULT');
     expect(state.matchScores).toEqual([11, 8]);
@@ -156,11 +156,11 @@ describe('Persisted room decoding through Firebase serialization', () => {
 
     state = deciding();
     const before = decode(state);
-    state = apply(state, { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'comfort' } });
+    state = apply(state, { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'spy' } });
     const after = decode(state);
     expect(after.public).toEqual(before.public);
     expect(after.private.guest).toEqual(before.private.guest);
-    expect(after.private.host).toMatchObject({ decisionSubmitted: true, guess: 'comfort', guessClueIndex: 0 });
+    expect(after.private.host).toMatchObject({ decisionSubmitted: true, guess: 'spy', guessClueIndex: 0 });
     expect(after.private.host.matchId).toBe(after.public.matchId);
     expect(after.private.host.roundId).toBe(after.public.roundId);
     expect(after.public).not.toHaveProperty('revision');
@@ -183,14 +183,14 @@ describe('Persisted room decoding through Firebase serialization', () => {
 
   it('restores the next-round barrier and clears its flags when the next round starts', () => {
     let state = deciding();
-    state = apply(state, { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'comfort' } });
-    state = apply(state, { type: 'SUBMIT_DECISION', seat: 1, clueIndex: 0, decision: { type: 'guess', roleId: 'saver' } });
+    state = apply(state, { type: 'SUBMIT_DECISION', seat: 0, clueIndex: 0, decision: { type: 'guess', roleId: 'spy' } });
+    state = apply(state, { type: 'SUBMIT_DECISION', seat: 1, clueIndex: 0, decision: { type: 'guess', roleId: 'alien' } });
     state = apply(decode(state).server.gameState, { type: 'NEXT_ROUND_READY', seat: 0 });
     const waiting = decode(state);
     expect(waiting.public.phase).toBe('ROUND_REVEAL');
     expect(waiting.private.host.nextRoundReady).toBe(true);
     expect(waiting.private.guest.nextRoundReady).toBe(false);
-    state = apply(waiting.server.gameState, { type: 'NEXT_ROUND_READY', seat: 1, nextRolePair: ['explorer', 'companion'] });
+    state = apply(waiting.server.gameState, { type: 'NEXT_ROUND_READY', seat: 1, nextRolePair: ['vampire', 'time_traveler'] });
     const next = decode(state);
     expect(next.private.host.nextRoundReady).toBe(false);
     expect(next.private.host.roleAcknowledged).toBe(false);
@@ -214,7 +214,7 @@ describe('Persisted room decoding through Firebase serialization', () => {
     ['missing active round', (r: RoomRecord) => { r.server.gameState.currentRound = null; }],
     ['missing active deck', (r: RoomRecord) => { r.server.matchDeck = null; }],
     ['missing ack flags', (r: RoomRecord) => { Reflect.deleteProperty(r.server.gameState.currentRound!, 'roleAcks'); }],
-    ['unknown role', (r: RoomRecord) => { r.server.gameState.currentRound!.roles[0] = 'secret-fixture' as 'saver'; }],
+    ['unknown role', (r: RoomRecord) => { r.server.gameState.currentRound!.roles[0] = 'secret-fixture' as 'alien'; }],
     ['bad decision', (r: RoomRecord) => { r.server.gameState.currentRound!.currentDecisions[0] = { type: 'broken' } as unknown as { type: 'continue' }; }],
     ['member mismatch', (r: RoomRecord) => { r.members.host.seat = 1; }],
     ['unexpected third seat', (r: RoomRecord) => { Object.assign(r.server.gameState.seats, { 2: r.server.gameState.seats[0] }); }],

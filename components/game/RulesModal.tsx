@@ -1,13 +1,15 @@
 'use client';
 
-import { ROLES, ROLE_IDS, SCORE_TABLE } from '@/lib/game/types';
+import { getRoleInfo, getRoleIds, LEGACY_CONTENT_VERSION, type ContentVersion, SCORE_TABLE } from '@/lib/game/types';
+import RolePortrait from './RolePortrait';
 
 interface RulesModalProps {
   isOpen: boolean;
+  contentVersion?: ContentVersion;
   onClose: () => void;
 }
 
-export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
+export default function RulesModal({ isOpen, onClose, contentVersion }: RulesModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -34,10 +36,11 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
           <div className="rules-callout">
             <div className="rules-callout-icon" aria-hidden="true">!</div>
             <div className="rules-callout-text">
-              <strong>กฎข้อสำคัญ:</strong> ตอบตามบทบาทที่ได้รับอย่างเป็นธรรมชาติ อย่าจงใจตอบตรงข้ามเพื่อกันเพื่อนทาย เพราะคะแนนมาจากการจับตัวตนของอีกฝ่ายให้ได้!
+              <strong>การสวมบท:</strong> ตอบตามบทบาทที่ได้รับอย่างเป็นธรรมชาติ พยายามกลมกลืนกับมนุษย์ ทุกบทเลือกได้ทุกตัวเลือก ไม่มีคำตอบถูกผิดและไม่มีคะแนนจากคำตอบ คะแนนมาจากการทายตัวตนของอีกฝ่าย!
             </div>
           </div>
 
+          {contentVersion !== LEGACY_CONTENT_VERSION && <p className="rules-caption">การสัมผัสของผีเป็นบริบทสำหรับสวมบท ไม่ทำให้เกมเปิดบทอัตโนมัติ แวมไพร์เลี่ยงแสงแดดโดยตรง แต่ทำกิจกรรมในอาคารตอนกลางวันได้</p>}
           {/* Scoring Table */}
           <div className="rules-section">
             <h3 className="rules-section-title"><span className="rules-section-index" aria-hidden="true">01</span>ตารางคะแนนการทาย</h3>
@@ -62,13 +65,16 @@ export default function RulesModal({ isOpen, onClose }: RulesModalProps) {
           <div className="rules-section">
             <h3 className="rules-section-title"><span className="rules-section-index" aria-hidden="true">02</span>บทบาททั้ง 6 ในเกม</h3>
             <div className="rules-roles-list">
-              {ROLE_IDS.map((roleId, idx) => {
-                const info = ROLES[roleId];
+              {getRoleIds(contentVersion).map((roleId, idx) => {
+                const info = getRoleInfo(roleId);
                 return (
                   <div key={roleId} className={`rules-role-card rules-file-${roleId}`}>
-                    <div className="rules-role-header">
-                      <span className="rules-role-index" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
-                      <span className={`rules-role-badge role-${roleId}`}>{info.name}</span>
+                    <div className="rules-role-identity">
+                      <RolePortrait role={roleId} className="rules-role-portrait" sizes="80px" />
+                      <div className="rules-role-header">
+                        <span className="rules-role-index" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
+                        <span className={`rules-role-badge role-${roleId}`}>{info.name}</span>
+                      </div>
                     </div>
                     <div className="rules-role-desc">{info.description}</div>
                   </div>

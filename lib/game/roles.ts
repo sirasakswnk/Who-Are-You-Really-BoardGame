@@ -3,16 +3,16 @@
  * Implements role pairing, validation, and deterministic random generators
  */
 
-import { RoleId, ROLE_IDS } from './types';
+import { RoleId, ROLE_IDS, getRoleIds, roleContentVersion, ACTIVE_CONTENT_VERSION, type ContentVersion } from './types';
 
 /**
  * Returns all 30 possible ordered role pairs (P0 != P1).
  * 6 roles * 5 remaining = 30 ordered pairs.
  */
-export function getAllRolePairs(): Array<[RoleId, RoleId]> {
+export function getAllRolePairs(version: ContentVersion = ACTIVE_CONTENT_VERSION): Array<[RoleId, RoleId]> {
   const pairs: Array<[RoleId, RoleId]> = [];
-  for (const r0 of ROLE_IDS) {
-    for (const r1 of ROLE_IDS) {
+  for (const r0 of getRoleIds(version)) {
+    for (const r1 of getRoleIds(version)) {
       if (r0 !== r1) {
         pairs.push([r0, r1]);
       }
@@ -42,9 +42,9 @@ export function createMulberry32(seed: number): () => number {
  * Randomly generates a role pair [seat0Role, seat1Role] where seat0Role != seat1Role.
  * Accepts an optional custom random number generator (0 <= rng() < 1).
  */
-export function generateRolePair(rng: () => number = Math.random): [RoleId, RoleId] {
-  const index = Math.floor(rng() * ALL_ROLE_PAIRS.length);
-  const pair = ALL_ROLE_PAIRS[index];
+export function generateRolePair(rng: () => number = Math.random, version: ContentVersion = ACTIVE_CONTENT_VERSION): [RoleId, RoleId] {
+  const pairs = version === ACTIVE_CONTENT_VERSION ? ALL_ROLE_PAIRS : getAllRolePairs(version);
+  const pair = pairs[Math.floor(rng() * pairs.length)];
   return [pair[0], pair[1]];
 }
 
@@ -52,7 +52,7 @@ export function generateRolePair(rng: () => number = Math.random): [RoleId, Role
  * Validates if a string is a valid RoleId.
  */
 export function isValidRoleId(val: unknown): val is RoleId {
-  return typeof val === 'string' && ROLE_IDS.includes(val as RoleId);
+  return typeof val === 'string' && ROLE_IDS.some(role => role === val);
 }
 
 /**
@@ -60,5 +60,5 @@ export function isValidRoleId(val: unknown): val is RoleId {
  * Rule: Players cannot guess their own assigned role!
  */
 export function canGuessRole(guessedRole: RoleId, ownRole: RoleId): boolean {
-  return isValidRoleId(guessedRole) && guessedRole !== ownRole;
+  return getRoleIds(roleContentVersion(ownRole)).includes(guessedRole) && guessedRole !== ownRole;
 }

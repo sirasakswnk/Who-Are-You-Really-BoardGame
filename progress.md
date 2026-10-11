@@ -1,5 +1,7 @@
 # Who Are You Really? — Progress
 
+> อัปเดต 2026-10-10: เกมใหม่ใช้ `hidden-identities-v1` (6 ตัวตนลับ / 16 ข้อ / packs A–D) รายการ M0–M8 ด้านล่างเป็นประวัติงานเดิม ไม่ใช่ผล balance หรือผลตรวจ release ของชุดใหม่ ดูผลล่าสุดใน [content/report.md](content/report.md)
+
 ## M0 — Bootstrap ✅
 
 - [x] Next.js 16.4.0 + TypeScript strict + App Router initialized
@@ -168,3 +170,34 @@
   - Cleanliness audit passed: Zero production mocks, zero TODO/FIXME items, zero toast-only stubs, zero secret leaks.
 - [x] All 70 Vitest unit/concurrency tests + 8 Playwright E2E tests + TypeScript strict + ESLint + Next.js build passed.
 - [x] Project state: **Fully delivered and production-ready! 🚀**
+
+
+## Content update — 2026-10-10
+
+- เปลี่ยนบท/คำถามตาม canonical JSON ใน `codex-content-update.md` โดยคงข้อความทั้งหมด; ชุดเก่าแยกเป็น legacy
+- เพิ่ม contentVersion และตัวอ่านห้องเก่า: active match เดิมเล่น snapshot/บทเดิมจนจบ; lobby/rematch ใหม่ใช้ hidden-identities-v1; ไม่ map IDs ไม่ล้าง Firebase Auth หรือห้องจริง
+- จอง packs A–D ครบตั้งแต่เริ่มเกม สุ่มลำดับชุดอิสระจากบทและคงลำดับข้อภายในชุด คะแนน/เฟสและ private guess barrier คงเดิม
+- อัปเดต role cards/picker/help/reveal/history/preview, notes cache, validators และ fixtures/tests
+- ผลตรวจ: 373 Vitest tests ผ่านเมื่อเปิด local Auth/RTDB Emulator; focused two-player Playwright ผ่าน 2 cases (mobile/desktop); lint/typecheck/content validation/build ผ่าน; preview ตรวจ 320/393/1280 px ไม่ล้นแนวนอน ชื่อไทยยาวแสดงครบ
+- ยังไม่รับรอง balance/playtest; ไม่ได้รัน Playwright specs อื่น ไม่ commit/push/deploy และไม่แก้ production database
+
+## Role portraits — 2026-10-11
+
+- เก็บ PNG ต้นฉบับแบบไม่เปลี่ยนข้อมูลใน `assets/roles/hidden-identities-original.png`; SHA-256 ตรงกับไฟล์ที่ผู้ใช้แนบ
+- แยก 6 บทตาม role ID เป็น lossless WebP ขนาด 512 × 512 ใน `public/images/roles`; ครอปชื่ออังกฤษออก คงภาพประกอบ/พื้นหลังและสัดส่วน มี crop manifest และ script สำหรับสร้างซ้ำ
+- ใช้ภาพในคู่มือรวมบท บัตรส่วนตัว/ปุ่มทบทวนบท หน้าเลือกคำทาย หน้าเฉลยประจำรอบ และประวัติหลังจบเกม; ชื่อไทย/คำอธิบายยังเป็น HTML จาก catalog เดิม ห้อง legacy ใช้ภาพตกแต่งเดิม ไม่สลับบท
+- คงเงื่อนไขซ่อนบทบาทเดิม ไม่แก้เกม คะแนน เฟส API ข้อมูล Firebase Rules หรือ Auth; ซ่อนบัตรแล้วภาพและชื่อถูกนำออกจากบัตร
+- ผลตรวจ: typecheck และ lint ไฟล์ที่แก้ผ่าน; UI/reminder/history projection/security/hydration tests ผ่าน 120 ข้อ; Chromium preview ผ่าน 64 กรณี รวมทั้ง 6 บทที่ 320/393/1280 px และกล่องทบทวนบทแนวนอน 667 × 375 px ไม่พบภาพยืด ภาพโหลดเสีย page error หรือ overflow แนวนอน
+- หลักฐานหน้าจอ/ผลตรวจอยู่ใน `work/verification/content-update/role-images/`; ตรวจด้วย browser viewport จำลอง ยังไม่ได้ตรวจบนโทรศัพท์จริง ไม่ commit/push/deploy
+
+## Deciding mobile UI/UX — 2026-10-11
+
+- เปลี่ยนบัตรผู้ต้องสงสัยเป็นรายการแนวนอนบนมือถือ ใช้ native radio เลือกทีละบท แยกปุ่มเปิดรายละเอียด; กรองบทตัวเองออกจริงและรอโหลดบทก่อนให้ทาย
+- เพิ่ม shortDescription ใน presentation mapping โดยคง catalog เต็มและใช้ description เดิมเป็น fallback สำหรับห้อง legacy
+- รายละเอียดเป็น native dialog / bottom sheet พร้อมรูป ชื่อ คำอธิบายเต็ม และบันทึกส่วนตัวเดิม; บัตรแสดงเฉพาะ badge สงสัย/ตัดออก การเปิดรายละเอียดและบันทึกไม่เปลี่ยนคำทาย และบทที่ตัดออกยังเลือกได้
+- ย่อหลักฐานให้คำตอบเพื่อนแสดงทันที ส่วนคำถามขยายได้; แถบตัดสินใจติดล่างมือถือ วัดความสูงจริงด้วย ResizeObserver รวมข้อความหลายบรรทัดและ safe area เพื่อไม่บังบัตรสุดท้าย
+- คง guess/continue/ack payload และ confirmation เดิม เพิ่มตัวกันส่งซ้ำระหว่างรอและรักษาคำทายเมื่อส่งล้มเหลว; ใช้ key ของ match/round ที่ GameContainer มีอยู่แล้ว ไม่ reset จาก presence update
+- ผลตรวจ: lint, typecheck และ production build ผ่าน; focused Vitest ผ่าน 123 tests ใน 5 files; Playwright UI ผ่าน 20 cases ที่ 360×780, 390×844, 430×932, 390×480 และ desktop 1280×900
+- Browser coverage รวม single selection/keyboard, แยก details/notes, Escape/focus containment/คืน focus, footer ไม่บังบัตรสุดท้าย, confirmation ยกเลิก/ส่งครั้งเดียว, ส่งล้มเหลว/ลองใหม่, เปลี่ยนรอบ/เกม, ข้อสุดท้าย, สถานะทายแล้ว/ส่งแล้ว/blocked, loading และ legacy fallback; ไม่พบ page error หรือ horizontal overflow ในกรณีที่ตรวจ
+- ภาพหลังแก้ทั้งรายการที่เลือกแล้ว แผงรายละเอียด และ confirmation ของแต่ละขนาดอยู่ใน `work/verification/content-update/deciding-mobile/`; ตรวจภาพมือถือ จอสั้น และ desktop แล้ว
+- ข้อจำกัด: เป็น Chromium viewport จำลองและ component callbacks สำหรับกรณี request ล่าช้า/ล้มเหลว ไม่ได้ทดสอบบนโทรศัพท์จริงหรือ Safari และไม่ได้รัน Firebase multiplayer E2E ทั้งชุดในงานนี้; ไม่ commit/push/deploy ไม่แก้ backend หรือข้อมูล production

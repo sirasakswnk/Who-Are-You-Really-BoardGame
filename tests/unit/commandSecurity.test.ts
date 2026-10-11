@@ -16,7 +16,7 @@ import { fakeRTDB } from '../helpers/fakeRTDB';
 
 let db: ReturnType<typeof fakeRTDB>;
 let now: number;
-const instance = () => createRoomService(db.store(), { clock: () => now, rolePair: () => ['saver', 'comfort'] });
+const instance = () => createRoomService(db.store(), { clock: () => now, rolePair: () => ['alien', 'spy'] });
 const room = (code: string) => decodeRoomRecord(db.values.get(`rooms/${code}`), code)!;
 function context(code: string) {
   const view = room(code).public;
@@ -62,16 +62,16 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 describe('Runtime command boundary', () => {
   it.each([
     { type: 'START_MATCH' },
-    { type: 'START_MATCH', rolePair: ['saver', 'comfort'], scenarios: [] },
+    { type: 'START_MATCH', rolePair: ['alien', 'spy'], scenarios: [] },
     { type: 'PLAYER_JOIN', uid: 'host', seat: 0 },
     { type: 'PLAYER_LEAVE', seat: 0 },
     { type: 'PLAYER_READY', ready: true },
     { type: 'ROLE_ACK', seat: 1 },
-    { type: 'NEXT_ROUND_READY', nextRolePair: ['saver', 'comfort'] },
+    { type: 'NEXT_ROUND_READY', nextRolePair: ['alien', 'spy'] },
     { type: 'SUBMIT_ANSWER', optionId: 'x', clueIndex: 0 },
     { type: 'SUBMIT_DECISION', decision: { type: 'invented' } },
     { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'invented' } },
-    { type: 'SUBMIT_DECISION', decision: { type: 'continue', roleId: 'saver' } },
+    { type: 'SUBMIT_DECISION', decision: { type: 'continue', roleId: 'alien' } },
     { type: 'SUBMIT_ANSWER', optionId: 'x'.repeat(129) },
   ])('rejects untrusted command %j before writing', async action => {
     const code = await lobby();
@@ -94,7 +94,7 @@ describe('Runtime command boundary', () => {
     await instance().setPlayerReady(code, 'host', true, context(code));
     await instance().setPlayerReady(code, 'guest', true, context(code));
     const before = structuredClone(db.values.get(`rooms/${code}`));
-    for (const [uid, extra] of [['guest', {}], ['host', { rolePair: ['saver', 'comfort'] }], ['guest', { uid: 'host' }]] as const) {
+    for (const [uid, extra] of [['guest', {}], ['host', { rolePair: ['alien', 'spy'] }], ['guest', { uid: 'host' }]] as const) {
       const response = await startRoute(request('/api/room/start', { code, ...context(code), ...extra }, uid));
       expect(response.status).toBe(400);
     }
@@ -203,18 +203,18 @@ describe('Authorization, immutable submissions and bound receipts', () => {
   });
   it('locks the first guess, rejects own-role guess and requires ack after a previous guess', async () => {
     const code = await answering(); await deciding(code);
-    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'saver' } })).success).toBe(false);
-    const guess = envelope(code, { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'comfort' } });
+    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'alien' } })).success).toBe(false);
+    const guess = envelope(code, { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'spy' } });
     expect((await instance().dispatchGameAction(code, 'host', guess)).success).toBe(true);
-    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'explorer' } })).success).toBe(false);
+    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'vampire' } })).success).toBe(false);
     expect((await instance().dispatchGameAction(code, 'host', { ...guess, action: { type: 'SUBMIT_DECISION', decision: { type: 'continue' } } })).success).toBe(false);
     await send(code, 'guest', { type: 'SUBMIT_DECISION', decision: { type: 'continue' } });
     expect(room(code).public.clueIndex).toBe(1);
     await deciding(code); // Both players, including the earlier guesser, must answer.
     expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'continue' } })).success).toBe(false);
-    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'explorer' } })).success).toBe(false);
+    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'vampire' } })).success).toBe(false);
     expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'ack' } })).success).toBe(true);
-    expect(room(code).private.host.guess).toBe('comfort');
+    expect(room(code).private.host.guess).toBe('spy');
   });
   it('forces unguessed players to guess at the final clue', async () => {
     const code = await answering();
@@ -225,7 +225,7 @@ describe('Authorization, immutable submissions and bound receipts', () => {
     expect(room(code).public.clueIndex).toBe(3);
     expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'continue' } })).success).toBe(false);
     expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'ack' } })).success).toBe(false);
-    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'comfort' } })).success).toBe(true);
+    expect((await send(code, 'host', { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'spy' } })).success).toBe(true);
   });
   it('never trusts an unbound legacy receipt as proof of success', async () => {
     const code = await lobby();
@@ -267,8 +267,8 @@ describe('Stale contexts and rematch identity', () => {
       ids.add(room(code).public.roundId!);
       await pair(code, { type: 'ROLE_ACK' });
       await deciding(code);
-      const hostGuess = envelope(code, { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'comfort' } });
-      const guestGuess = envelope(code, { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'saver' } });
+      const hostGuess = envelope(code, { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'spy' } });
+      const guestGuess = envelope(code, { type: 'SUBMIT_DECISION', decision: { type: 'guess', roleId: 'alien' } });
       await Promise.all([instance().dispatchGameAction(code, 'host', hostGuess), instance().dispatchGameAction(code, 'guest', guestGuess)]);
       const before = structuredClone(db.values.get(`rooms/${code}`));
       expect(await instance().dispatchGameAction(code, 'host', hostGuess)).toEqual({ success: true });

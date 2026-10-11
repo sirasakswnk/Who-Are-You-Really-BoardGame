@@ -4,7 +4,7 @@ export function clientSnapshot(phase: RoomSnapshot['public']['phase'] = 'ANSWERI
   return {
     seat: 0, isHost: true,
     public: {
-      revision, code: 'ABC234', phase, matchId, roundId, roundIndex: 0, clueIndex: 0,
+      contentVersion: 'hidden-identities-v1', revision, code: 'ABC234', phase, matchId, roundId, roundIndex: 0, clueIndex: 0,
       players: [
         { uid: 'host', seat: 0, isHost: true, ready: true, displayName: 'หนึ่ง', avatarId: 'cat' },
         { uid: 'guest', seat: 1, isHost: false, ready: true, displayName: 'สอง', avatarId: 'fox' },
@@ -12,7 +12,7 @@ export function clientSnapshot(phase: RoomSnapshot['public']['phase'] = 'ANSWERI
       scenario: { id: 's', version: 1, category: 'travel', prompt: 'เลือกการเดินทาง', options: [{ id: 'a', label: 'รถไฟ' }, { id: 'b', label: 'รถเมล์' }] }, termination: null,
     },
     private: {
-      revision, matchId, roundId, phase, clueIndex: 0, role: phase === 'LOBBY' ? null : 'saver',
+      contentVersion: 'hidden-identities-v1', revision, matchId, roundId, phase, clueIndex: 0, role: phase === 'LOBBY' ? null : 'alien',
       guess: null, guessClueIndex: null, committedAnswer: null, hasGuessed: false,
       roleAcknowledged: false, answerSubmitted: false, revealAcknowledged: false,
       decisionSubmitted: false, nextRoundReady: false, rematchRequested: false,

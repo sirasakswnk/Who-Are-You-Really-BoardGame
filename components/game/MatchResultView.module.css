@@ -100,7 +100,9 @@
 .myReport { border-top: 3px solid var(--sea); }
 .opponentReport { border-top: 3px solid var(--brick); }
 .reportName { margin: 0 0 8px; color: var(--ink); font-size: 12px; font-weight: 800; line-height: 1.7; }
-.actualRole { display: flex; flex-direction: column; gap: 3px; color: var(--ink-soft); font-size: 11px; line-height: 1.7; }
+.actualRole { display: flex; align-items: center; gap: 10px; color: var(--ink-soft); font-size: 11px; line-height: 1.7; }
+.portrait { width: 64px; }
+.roleText { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .actualRole strong { color: var(--ink); font-size: 14px; }
 .guess { margin: 8px 0 0; color: var(--ink); font-size: 12px; line-height: 1.8; }
 .reason { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed var(--line); color: var(--ink-soft); font-size: 12px; line-height: 1.8; }

@@ -1,4 +1,4 @@
-import { ROLE_IDS, SCORE_TABLE } from '@/lib/game/types';
+import { ROLE_IDS, ACTIVE_CONTENT_VERSION, SCORE_TABLE } from '@/lib/game/types';
 import type { GamePhase, RoleId, RoundResult, Scenario } from '@/lib/game/types';
 import type { RoomSnapshot } from '@/lib/client/roomSnapshot';
 
@@ -52,7 +52,7 @@ export function createPreviewSnapshot(
 ): RoomSnapshot {
   const { phase, role, roundIndex, clueIndex, seat, state } = options;
   const opponentSeat = seat === 0 ? 1 : 0;
-  const opponentRole = ROLE_IDS[(ROLE_IDS.indexOf(role) + 1) % ROLE_IDS.length];
+  const opponentRole = ROLE_IDS[(ROLE_IDS.findIndex(id => id === role) + 1) % ROLE_IDS.length];
   const roles: [RoleId, RoleId] = seat === 0 ? [role, opponentRole] : [opponentRole, role];
   const wrongGuess = ROLE_IDS.find(candidate => !roles.includes(candidate))!;
   const revealedAnswers = scenarios.map((scenario, index) => ({
@@ -98,7 +98,7 @@ export function createPreviewSnapshot(
       revision: 1,
       code: 'DEMOUI',
       phase,
-      matchId: 'ui-preview',
+      contentVersion: ACTIVE_CONTENT_VERSION, matchId: 'ui-preview',
       roundId,
       roundIndex,
       clueIndex,
@@ -117,7 +117,7 @@ export function createPreviewSnapshot(
     },
     private: {
       revision: 1,
-      matchId: 'ui-preview',
+      contentVersion: ACTIVE_CONTENT_VERSION, matchId: 'ui-preview',
       roundId,
       phase,
       clueIndex,

@@ -6,7 +6,7 @@ import AnsweringView from '@/components/game/AnsweringView';
 import AnswerRevealView from '@/components/game/AnswerRevealView';
 import DecidingView from '@/components/game/DecidingView';
 import { SCENARIOS, stripEditorial } from '@/content/scenarios';
-import { ROLE_IDS, ROLES, type GamePhase, type RoleId } from '@/lib/game/types';
+import { ROLE_IDS, getRoleInfo, type GamePhase, type RoleId } from '@/lib/game/types';
 
 function header(phase: GamePhase, role: RoleId | null, acknowledged: boolean) {
   return renderToString(createElement(Fragment, null, createElement(GameHeader, {
@@ -22,6 +22,7 @@ function header(phase: GamePhase, role: RoleId | null, acknowledged: boolean) {
     revealedAnswers: [], onAcknowledgeReveal: async () => {},
     myRole: role, roleAcknowledged: acknowledged, roleContextKey: 'match-one:round-one',
   }) : phase === 'DECIDING' ? createElement(DecidingView, {
+    mySeat: 0,
     clueIndex: 0, myRole: role, hasGuessed: false, myGuessedRole: null, myGuessedClueIndex: null,
     onSubmitDecision: async () => {}, roleAcknowledged: acknowledged, roleContextKey: 'match-one:round-one',
   }) : null));
@@ -32,18 +33,18 @@ describe('Role reminder visibility from the current private role acknowledgement
     'DECIDING', 'ROUND_REVEAL', 'MATCH_RESULT', 'ABANDONED', 'CLOSED'];
 
   it.each(phases)('does not offer a role reminder before acknowledgement in %s', phase => {
-    expect(header(phase, 'saver', false)).not.toContain('role-reminder-row');
+    expect(header(phase, 'alien', false)).not.toContain('role-reminder-row');
   });
   it.each(phases)('does not offer a role reminder when the private role is absent in %s', phase => {
     expect(header(phase, null, true)).not.toContain('role-reminder-row');
   });
   it.each(['LOBBY','ROUND_REVEAL','MATCH_RESULT','ABANDONED','CLOSED'] as GamePhase[])(
     'hides the reminder outside the secret-role part of a round in %s', phase => {
-      expect(header(phase, 'saver', true)).not.toContain('role-reminder-row');
+      expect(header(phase, 'alien', true)).not.toContain('role-reminder-row');
     });
   it.each(['ROLE_INTRO','ANSWERING','ANSWER_REVEAL','DECIDING'] as GamePhase[])(
     'offers the reminder at the screen controls after acknowledgement in %s', phase => {
-      const html = header(phase, 'saver', true);
+      const html = header(phase, 'alien', true);
       expect(html).toContain('role-reminder-row');
       if (phase === 'ANSWERING') {
         expect(html.indexOf('role-reminder-row')).toBeGreaterThan(html.indexOf('scenario-folder-tab'));
@@ -64,7 +65,7 @@ describe('Role reminder visibility from the current private role acknowledgement
     });
   it.each(ROLE_IDS)('uses the exact assigned %s role description from the catalog', role => {
     const html=header('ANSWERING',role,true);
-    expect(html).toContain(ROLES[role].name);
-    expect(html).toContain(ROLES[role].description);
+    expect(html).toContain(getRoleInfo(role).name);
+    expect(html).toContain(getRoleInfo(role).description);
   });
 });

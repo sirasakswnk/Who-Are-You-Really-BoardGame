@@ -1,18 +1,20 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { ROLES, type RoleId } from '@/lib/game/types';
+import { getRoleInfo, type RoleId } from '@/lib/game/types';
+import RolePortrait from './RolePortrait';
 import styles from './RoleReminder.module.css';
 
-export default function RoleReminder({ role, placement = 'header' }: {
+export default function RoleReminder({ role, placement = 'header', label = 'บทบาทของฉัน' }: {
   role: RoleId;
   placement?: 'header' | 'folder-tab';
+  label?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const documentId = useId();
-  const roleInfo = ROLES[role];
+  const roleInfo = getRoleInfo(role);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -35,7 +37,7 @@ export default function RoleReminder({ role, placement = 'header' }: {
     <div className={`role-reminder-row ${styles.row}`}>
       <button type="button" className={`${styles.trigger} ${placement === 'folder-tab' ? styles.folderTabTrigger : ''}`} onClick={openFile}
         aria-haspopup="dialog" aria-controls={`${documentId}-dialog`} aria-expanded={isOpen}>
-        บทบาทของฉัน
+        {label}
       </button>
       <dialog ref={dialogRef} className={styles.dialog} id={`${documentId}-dialog`}
         aria-label="บทบาทของฉัน" aria-describedby={`${documentId}-description`}
@@ -56,6 +58,7 @@ export default function RoleReminder({ role, placement = 'header' }: {
           </div>
           <div className={styles.paper}>
             <p className={styles.kicker}>บทบาทของคุณในรอบนี้</p>
+            <RolePortrait role={role} className={styles.portrait} sizes="(max-height: 450px) 100px, 160px" />
             <h2 className={styles.roleName}>{roleInfo.name}</h2>
             <p className={styles.description} id={`${documentId}-description`}>{roleInfo.description}</p>
           </div>

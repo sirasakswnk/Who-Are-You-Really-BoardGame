@@ -1,4 +1,4 @@
-import type { GameState, PlayerSeat, RoleId, Scenario, RevealedEvidence, RoundResult } from '../game/types';
+import type { ContentVersion, GameState, PlayerSeat, RoleId, Scenario, RevealedEvidence, RoundResult } from '../game/types';
 
 /** Unversioned rooms are legacy version 0 and are decoded into version 1. */
 export const ROOM_SCHEMA_VERSION = 1;
@@ -14,6 +14,7 @@ export interface RoomRecord {
     code: string;
     phase: GameState['phase'];
     matchId: string;
+    contentVersion?: ContentVersion;
     roundId: string | null;
     roundIndex: number;
     clueIndex: number;
@@ -30,6 +31,7 @@ export interface RoomRecord {
   private: Record<string, {
     revision?: number;
     matchId: string;
+    contentVersion?: ContentVersion;
     roundId: string | null;
     phase: GameState['phase'];
     clueIndex: number;
