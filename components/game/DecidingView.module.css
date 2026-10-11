@@ -41,16 +41,21 @@
 .clueLabel { padding: 4px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--deciding-grain), var(--paper); color: var(--ink-soft); font-size: 12px; line-height: 1.6; }
 .analysisStamp { padding: 3px 8px; border: 1.5px solid var(--brick); border-radius: 4px; color: var(--brick); font-size: 11px; font-weight: 700; line-height: 1.6; transform: rotate(-2deg); }
 .folder .title { margin: 16px 0 6px; color: var(--ink); font-size: clamp(20px, 5vw, 24px); font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
-.evidenceReview { min-width: 0; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 10px 10px 4px 10px; background: var(--deciding-grain), var(--paper); }
-.reviewHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.reviewTitle { margin: 0; color: var(--ink-soft); font-size: 12px; font-weight: 700; line-height: 1.7; }
-.reviewClue { padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; color: var(--ink-soft); font-size: 11px; white-space: nowrap; }
-.reviewAnswer { margin-top: 8px; padding: 9px 12px; border-left: 3px solid var(--sea); border-radius: 0 7px 7px 0; background: var(--sea-tint); }
-.reviewAnswerText { margin: 0; color: var(--ink); font-size: 15px; font-weight: 700; line-height: 1.65; overflow-wrap: anywhere; }
-.questionToggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; min-width: 44px; margin-top: 2px; padding: 6px 2px; border: 0; background: transparent; color: var(--sea); font: 700 12px/1.7 var(--font-th); cursor: pointer; }
-.reviewQuestion { padding-top: 8px; border-top: 1px dashed var(--line); }
+.evidenceReview { position: relative; min-width: 0; margin-top: 14px; padding: 14px 16px 0; border: 1px solid var(--line); border-radius: 3px; background: var(--deciding-grain), var(--paper); box-shadow: 2px 3px 0 rgba(27, 42, 74, .08); }
+.evidenceReview::after { content: ""; position: absolute; top: -1px; right: -1px; width: 16px; height: 16px; border-left: 1px solid var(--line); border-bottom: 1px solid var(--line); background: linear-gradient(45deg, #F0E5C9 0 49%, var(--folder) 50%); pointer-events: none; }
+.reviewHeading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 12px; }
+.reviewTitle { margin: 0; color: var(--ink-soft); font-size: 12px; font-weight: 800; line-height: 1.7; }
+.reviewClue { color: var(--stone); font-size: 11px; font-weight: 700; line-height: 1.7; white-space: nowrap; }
+.reviewAttribution { margin: 12px 0 6px; color: var(--ink-soft); font-size: 12px; line-height: 1.7; }
+.reviewAnswer { position: relative; margin: 0 0 12px; padding: 0 0 0 14px; border-left: 3px solid var(--sea); }
+.reviewQuote { display: block; height: 15px; color: var(--sea); opacity: .55; font: 32px/1 Georgia, serif; }
+.reviewAnswerText { margin: 0; color: var(--ink); font-size: 16px; font-weight: 700; line-height: 1.8; overflow-wrap: anywhere; }
+.questionToggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 48px; min-width: 44px; padding: 8px 0; border: 0; border-top: 1px dashed var(--line); border-radius: 0; background: transparent; color: var(--sea); font: 700 13px/1.7 var(--font-th); text-align: left; cursor: pointer; }
+.questionToggleMark { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 1px solid rgba(31, 122, 112, .25); border-radius: 50%; font: 500 18px/1 system-ui, sans-serif; }
+.reviewQuestion { padding: 0 0 14px; }
+.reviewQuestionLabel { margin: 0 0 5px; color: var(--stone); font-size: 11px; font-weight: 700; line-height: 1.7; }
 .reviewPrompt, .reviewEmpty { margin: 0; color: var(--ink-soft); font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
-.reviewEmpty { margin-top: 8px; }
+.reviewEmpty { margin: 12px 0 14px; }
 .selectionPanel { min-width: 0; }
 .folder .subtitle { margin: 0 0 12px; color: var(--ink-soft); font-size: 12px; font-weight: 700; line-height: 1.8; }
 .folder .finalAlert { margin-bottom: 12px; padding: 10px; border: 1px solid var(--brick); border-radius: 9px; background: var(--blush); color: var(--brick); font-size: 12px; line-height: 1.8; }

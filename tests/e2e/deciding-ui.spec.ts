@@ -67,9 +67,11 @@ test('compact suspects, native selection, independent details and notes, focus, 
   await expect(questionToggle).toHaveAttribute('aria-expanded', 'false');
   const prompt = page.locator(`[id="${await questionToggle.getAttribute('aria-controls')}"]`);
   await expect(prompt).toBeHidden();
-  await expect(page.locator('.deciding-evidence-review p').first()).toBeVisible();
+  const friendAnswer = page.locator('.deciding-evidence-review blockquote');
+  await expect(friendAnswer).toBeVisible();
   await questionToggle.click(); await expect(prompt).toBeVisible();
   await page.getByRole('button', { name: 'ซ่อนคำถาม', exact: false }).click();
+  await expect(friendAnswer).toBeVisible();
 
   const spy = page.getByRole('radio', { name: 'สายลับ', exact: true });
   await spy.check(); await expect(spy).toBeChecked();

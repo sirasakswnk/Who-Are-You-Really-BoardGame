@@ -147,16 +147,21 @@ export default function DecidingView({
         <h2 className={`deciding-title ${styles.title}`}>เพื่อนของคุณน่าจะเป็นใคร?</h2>
         <section className={`deciding-evidence-review ${styles.evidenceReview}`} aria-labelledby={`${documentId}-review-title`}>
           <div className={styles.reviewHeading}>
-            <h3 id={`${documentId}-review-title`} className={styles.reviewTitle}>คำตอบล่าสุดของเพื่อน</h3>
-            <span className={styles.reviewClue}>ข้อที่ {clueIndex + 1}</span>
+            <h3 id={`${documentId}-review-title`} className={styles.reviewTitle}>ใบคำให้การ</h3>
+            <span className={styles.reviewClue}>ข้อ {clueIndex + 1}/{CLUES_PER_ROUND}</span>
           </div>
           {lastRevealed ? <>
-            <div className={styles.reviewAnswer}><p className={styles.reviewAnswerText}>{lastRevealed.answers[opponentSeat]}</p></div>
+            <p className={styles.reviewAttribution}>เพื่อนตอบว่า…</p>
+            <blockquote className={styles.reviewAnswer}>
+              <span className={styles.reviewQuote} aria-hidden="true">“</span>
+              <p className={styles.reviewAnswerText}>{lastRevealed.answers[opponentSeat]}</p>
+            </blockquote>
             <button type="button" className={styles.questionToggle} aria-expanded={questionExpanded}
               aria-controls={`${documentId}-question`} onClick={() => setQuestionExpanded(value => !value)}>
-              {questionExpanded ? 'ซ่อนคำถาม' : 'ดูคำถาม'} <span aria-hidden="true">{questionExpanded ? '−' : '+'}</span>
+              {questionExpanded ? 'ซ่อนคำถาม' : 'ดูคำถามของข้อนี้'} <span className={styles.questionToggleMark} aria-hidden="true">{questionExpanded ? '−' : '+'}</span>
             </button>
             <div id={`${documentId}-question`} className={styles.reviewQuestion} hidden={!questionExpanded}>
+              <p className={styles.reviewQuestionLabel}>คำถามของข้อนี้</p>
               <p className={styles.reviewPrompt}>{lastRevealed.prompt}</p>
             </div>
           </> : <p className={styles.reviewEmpty}>ยังไม่มีคำถามและคำตอบที่เปิดเผยสำหรับข้อนี้</p>}
